@@ -1,0 +1,1179 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>学习航线</title>
+<meta name="description" content="每周弄懂一个概念、练一个技能，一步一步带着学。">
+<meta name="theme-color" content="#F1F4F6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F1417" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="学习航线">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=ZCOOL+XiaoWei&amp;family=Barlow+Semi+Condensed:wght@500;600&amp;display=swap" media="print" onload="this.media='all'">
+<style>
+html{-webkit-text-size-adjust:100%}
+:root{color-scheme:light}
+body{margin:0;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px);-webkit-tap-highlight-color:transparent}
+img{max-width:100%}
+[hidden]{display:none!important}
+/* Layout: a ship's log for study. The week's one concept and one skill sit top-left as two short routes of waypoints;
+   the guide that says what to do now sits under them; time, the concept library, the log and the shelf run down the right (stacked on phones). */
+:root{
+  --bg:#F1F4F6; --surface:#FFFFFF; --ink:#131C22; --ink-2:#4A5861; --muted:#76838C;
+  --line:#DDE3E7; --line-2:#C2CCD3; --danger:#B4302F;
+  --study:#4a3aa7;
+  --font-display:"ZCOOL XiaoWei","Songti SC","STSong","Noto Serif SC",serif;
+  --font-body:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;
+  --font-data:"Barlow Semi Condensed","DIN Alternate","Bahnschrift","Roboto Condensed",-apple-system,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1417; --surface:#171E22; --ink:#E8EEF1; --ink-2:#A9B6BE; --muted:#85939B;
+    --line:#263038; --line-2:#3A474F; --danger:#F08A8A;
+    --study:#9085e9;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1417; --surface:#171E22; --ink:#E8EEF1; --ink-2:#A9B6BE; --muted:#85939B;
+  --line:#263038; --line-2:#3A474F; --danger:#F08A8A;
+  --study:#9085e9;
+  color-scheme:dark;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+h1,h2,h3,p,ol,ul,figure{margin:0}
+ol,ul{padding:0;list-style:none}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+
+.app{--goal:var(--study);max-width:1120px;margin-inline:auto;padding-inline:clamp(16px,4vw,32px);padding-block:22px 56px;display:grid;gap:20px}
+
+/* header */
+.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:6px 20px}
+.top h1{font-family:var(--font-display);font-weight:400;font-size:30px;line-height:1.15;letter-spacing:.04em}
+.today{color:var(--ink-2);font-size:13.5px}
+.status{font-size:12.5px;color:var(--ink-2);display:flex;align-items:center;gap:7px}
+.status::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--muted);flex:none}
+.status[data-mode="local"]::before{background:var(--goal)}
+
+.cols{display:grid;gap:20px;grid-template-columns:minmax(0,1fr)}
+.col{display:grid;grid-template-columns:minmax(0,1fr);gap:20px;min-width:0;align-content:start}
+@media (min-width:940px){.cols{grid-template-columns:minmax(0,410px) minmax(0,1fr);align-items:start}}
+
+/* shared panel */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px 18px 20px}
+.panel-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+.h2{font-family:var(--font-display);font-weight:400;font-size:19px;letter-spacing:.06em;line-height:1.3}
+.eyebrow{font-size:12.5px;color:var(--ink-2);letter-spacing:.08em}
+
+/* hero: the one goal */
+.hero{--hero-bg:color-mix(in srgb,var(--goal) 11%,var(--surface));background:var(--hero-bg);border:1px solid color-mix(in srgb,var(--goal) 38%,var(--line));border-radius:10px;padding:18px 18px 20px}
+.hero-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.goal-title{font-family:var(--font-display);font-weight:400;font-size:31px;line-height:1.2;letter-spacing:.02em;margin-top:6px;text-wrap:balance}
+.goal-title .n{font-family:var(--font-data);font-weight:600;font-size:1.08em;letter-spacing:0}
+.goal-sub{color:var(--ink-2);font-size:13.5px}
+.goal-row{display:flex;flex-wrap:wrap;align-items:flex-end;gap:6px 18px;margin-top:16px}
+.count{display:flex;align-items:baseline;gap:8px;font-family:var(--font-data);font-variant-numeric:tabular-nums}
+.count .num{font-size:66px;font-weight:600;line-height:.86}
+.count .of{font-size:19px;font-weight:500;color:var(--ink-2)}
+.verdict{flex:1 1 150px;min-width:0;font-size:14px;color:var(--ink);padding-bottom:2px}
+.loading{color:var(--ink-2);margin-top:10px}
+
+.route{position:relative;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));margin-top:20px}
+.route::before{content:"";position:absolute;left:calc(100% / 14);right:calc(100% / 14);top:34px;height:2px;background:var(--line-2)}
+.wp{position:relative;display:grid;justify-items:center;gap:6px;min-width:0}
+.wp .wd{height:18px;line-height:18px;font-size:12px;color:var(--ink-2)}
+.wp .dot{width:22px;height:22px;border-radius:50%;border:2px solid var(--line-2);background:var(--hero-bg)}
+.wp .val{height:16px;line-height:16px;font:500 12px var(--font-data);font-variant-numeric:tabular-nums;color:var(--ink-2)}
+.wp.is-met .dot{background:var(--goal);border-color:var(--goal)}
+.wp.is-miss .dot{border-color:var(--goal)}
+.wp.is-none .dot{transform:scale(.38);background:var(--line-2)}
+.wp.is-future .dot{border-style:dashed}
+.wp.is-today .wd{color:var(--ink);font-weight:600}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:12px;font-size:12px;color:var(--ink-2)}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend i{width:10px;height:10px;border-radius:50%;border:2px solid var(--goal);flex:none}
+.legend i.met{background:var(--goal)}
+.legend i.none{transform:scale(.5);background:var(--line-2);border-color:var(--line-2)}
+
+.track{position:relative;height:8px;border-radius:4px;background:color-mix(in srgb,var(--goal) 22%,var(--surface));margin-top:20px}
+.track-fill{position:absolute;inset:0 auto 0 0;border-radius:4px;background:var(--goal)}
+.track-mark{position:absolute;top:50%;width:16px;height:16px;border-radius:50%;background:var(--goal);border:3px solid var(--hero-bg);transform:translate(-50%,-50%)}
+.track-ends{display:flex;justify-content:space-between;margin-top:8px;font:500 12.5px var(--font-data);color:var(--ink-2);font-variant-numeric:tabular-nums}
+
+.step{margin-top:16px;padding-top:12px;border-top:1px solid color-mix(in srgb,var(--goal) 30%,var(--line));font-size:14px}
+.step b{display:block;font-weight:400;font-size:12.5px;color:var(--ink-2);letter-spacing:.08em}
+
+/* controls */
+.link{background:none;border:0;padding:4px 0;font-size:13px;color:var(--ink-2);text-decoration:underline;text-underline-offset:3px;flex:none}
+.link:hover{color:var(--ink)}
+.link.danger{color:var(--danger)}
+.btn{height:46px;padding-inline:20px;border-radius:8px;border:1px solid var(--ink);background:var(--ink);color:var(--surface);font-weight:600;font-size:15px}
+.btn:disabled{opacity:.55;cursor:default}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line-2);font-weight:400}
+.field{display:grid;gap:5px;min-width:0}
+.field > label,.field > .lab{font-size:12.5px;color:var(--ink-2)}
+.inp{width:100%;min-width:0;height:44px;padding:0 11px;border:1px solid var(--line-2);border-radius:8px;background:var(--surface);font-size:16px;font-family:var(--font-data);font-weight:500;font-variant-numeric:tabular-nums}
+.inp.text{font-family:var(--font-body);font-weight:400;font-size:16px}
+.inp::placeholder{color:var(--muted);font-weight:400}
+.unit{display:flex;align-items:center;gap:8px}
+.unit span{flex:none;font-size:13.5px;color:var(--ink-2)}
+.seg{display:inline-flex;border:1px solid var(--line-2);border-radius:8px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:transparent;padding:7px 14px;font-size:13.5px;line-height:1.3}
+.seg button + button{border-left:1px solid var(--line-2)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{position:relative}
+.chip input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.chip span{display:block;padding:6px 13px;border:1px solid var(--line-2);border-radius:999px;font-size:13.5px;line-height:1.3;background:var(--surface)}
+.chip input:checked + span{background:var(--ink);border-color:var(--ink);color:var(--surface)}
+.chip input:focus-visible + span{outline:2px solid var(--ink);outline-offset:2px}
+.hint{font-size:12.5px;color:var(--ink-2)}
+.msg{font-size:13px;color:var(--danger);min-height:0}
+
+/* goal editor */
+.ged{display:grid;gap:14px}
+.ged h3{font-family:var(--font-display);font-weight:400;font-size:25px;line-height:1.25;letter-spacing:.03em}
+.ged .seg{width:100%}
+.ged .seg button{flex:1 1 0}
+.pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.ged .inp{background:color-mix(in srgb,var(--surface) 82%,transparent)}
+.actions{display:flex;flex-wrap:wrap;gap:10px}
+.actions .btn{flex:1 1 140px}
+
+/* entry form */
+.entry{display:grid;gap:16px}
+.date-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:end}
+.date-row .mini{height:44px;padding-inline:13px;border:1px solid var(--line-2);border-radius:8px;background:var(--surface);font-size:13.5px}
+.groups{display:grid;gap:0}
+.grp{display:grid;gap:10px;padding-block:14px;border-top:1px solid var(--line);order:1}
+.grp.is-goal{order:0}
+.grp-head{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600}
+.grp-head i{width:10px;height:10px;border-radius:3px;flex:none}
+.grp[data-k="sleep"] .grp-head i{background:var(--sleep)}
+.grp[data-k="move"] .grp-head i{background:var(--move)}
+.grp[data-k="weight"] .grp-head i{background:var(--weight)}
+.tag{font-size:11.5px;font-weight:400;color:var(--ink-2);border:1px solid var(--line-2);border-radius:4px;padding:0 6px;line-height:18px}
+.derived{font-size:13px;color:var(--ink-2)}
+.derived:empty{display:none}
+.derived strong{font:600 15px var(--font-data);color:var(--ink);font-variant-numeric:tabular-nums}
+.save-row{display:grid;gap:8px;padding-top:4px}
+
+/* trends */
+.demo-note{font-size:13px;color:var(--ink);border:1px dashed var(--line-2);border-radius:8px;padding:8px 12px;margin-bottom:6px}
+.charts{display:flex;flex-direction:column}
+.chart{padding-block:16px;border-top:1px solid var(--line);order:1;min-width:0}
+.chart.is-goal{order:0}
+.chart-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:2px 12px;margin-bottom:8px}
+.chart-head h3{display:flex;align-items:center;gap:8px;font-size:14.5px;font-weight:600}
+.chart-head h3 i{width:10px;height:10px;border-radius:3px;flex:none}
+.chart[data-k="sleep"] h3 i{background:var(--sleep)}
+.chart[data-k="move"] h3 i{background:var(--move)}
+.chart[data-k="weight"] h3 i{background:var(--weight)}
+.chart-head h3 small{font-weight:400;font-size:12.5px;color:var(--ink-2)}
+.stat{font:500 13.5px var(--font-data);color:var(--ink-2);font-variant-numeric:tabular-nums}
+.plot{position:relative;min-width:0}
+.plot svg{display:block;touch-action:pan-y}
+.tip{position:absolute;z-index:2;pointer-events:none;transform:translate(-50%,-100%);background:var(--ink);color:var(--surface);border-radius:6px;padding:6px 10px;font-size:12.5px;line-height:1.5;white-space:nowrap;font-variant-numeric:tabular-nums}
+.tip b{font-weight:600}
+.grid{stroke:var(--line);stroke-width:1;fill:none}
+.base{stroke:var(--line-2);stroke-width:1;fill:none}
+.tick{fill:var(--muted);font:500 11px var(--font-data);font-variant-numeric:tabular-nums}
+.band{fill:var(--ink);opacity:.07;display:none}
+.target{stroke:var(--ink-2);stroke-width:1;stroke-dasharray:4 3;fill:none}
+.tlabel{fill:var(--ink-2);font:500 11px var(--font-data);paint-order:stroke;stroke:var(--surface);stroke-width:4px;stroke-linejoin:round}
+.vlabel{fill:var(--ink);font:600 13px var(--font-data);paint-order:stroke;stroke:var(--surface);stroke-width:4px;stroke-linejoin:round}
+.m-sleep{fill:var(--sleep)}
+.m-move{fill:var(--move)}
+.m-wline{stroke:var(--weight);stroke-width:2;fill:none;stroke-linejoin:round;stroke-linecap:round}
+.m-wdot{fill:var(--weight);stroke:var(--surface);stroke-width:2}
+.none-text{fill:var(--muted);font:400 13px var(--font-body)}
+
+/* records */
+.records{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;min-width:0}
+.tablewrap{position:relative;overflow-x:auto;border-top:1px solid var(--line-2)}
+table{border-collapse:collapse;width:100%;min-width:500px;font-size:13.5px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:9px 10px 9px 0;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-weight:400;font-size:12.5px;color:var(--ink-2)}
+td.num{font-family:var(--font-data);font-weight:500;font-size:14.5px}
+td.acts{text-align:right;padding-right:0}
+td.acts .link{margin-left:12px}
+.empty{padding:14px 0;color:var(--ink-2);font-size:13.5px;border-bottom:1px solid var(--line)}
+.foot{font-size:12.5px;color:var(--ink-2)}
+.backup{display:grid;gap:12px}
+.backup .btn{height:44px;font-size:14.5px}
+.confirm{display:grid;gap:10px;border:1px dashed var(--line-2);border-radius:8px;padding:12px;font-size:14px}
+
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:5;max-width:calc(100% - 32px);background:var(--ink);color:var(--surface);padding:10px 16px;border-radius:8px;font-size:14px}
+@media (max-width:420px){
+  .goal-title{font-size:27px}
+  .count .num{font-size:58px}
+  .panel,.hero{padding-inline:15px}
+}
+@media (prefers-reduced-motion:no-preference){
+  .wp .dot,.track-fill,.track-mark{transition:background-color .2s,border-color .2s,width .3s,left .3s}
+}
+
+/* ---- study ---- */
+.m-study{fill:var(--study)}
+.chart.solo{border-top:0;padding-block:0 4px}
+.chart.solo h3 i{background:var(--study)}
+.route.n4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.route.n4::before{left:12.5%;right:12.5%}
+.route.n3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.route.n3::before{left:16.667%;right:16.667%}
+.track-block{margin-top:18px;padding-top:14px;border-top:1px solid color-mix(in srgb,var(--goal) 30%,var(--line))}
+.track-block .route{margin-top:10px}
+.tb-head{display:flex;align-items:baseline;gap:10px;font-size:14.5px;min-width:0}
+.tb-head span{flex:none;font-size:12.5px;color:var(--ink-2);letter-spacing:.08em}
+.tb-head b{font-weight:600;min-width:0;overflow-wrap:anywhere}
+.hero-actions{margin-top:18px}
+#guideView{display:grid;gap:10px}
+#guideView > p{font-size:14.5px}
+.guide-title{font-family:var(--font-display);font-weight:400;font-size:23px;line-height:1.3;letter-spacing:.03em;text-wrap:balance}
+.guide .actions{margin-top:6px}
+.wiz{display:grid;gap:14px}
+.wiz-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 12px;align-items:baseline}
+.clock{font:500 13px var(--font-data);color:var(--ink-2);font-variant-numeric:tabular-nums}
+.dots{display:flex;gap:6px}
+.dots li{flex:1 1 0;height:4px;border-radius:2px;background:var(--line-2)}
+.dots li.past{background:color-mix(in srgb,var(--goal) 45%,var(--surface))}
+.dots li.now{background:var(--goal)}
+.wiz-title{font-family:var(--font-display);font-weight:400;font-size:25px;line-height:1.25;letter-spacing:.03em}
+.ask{font-size:15.5px;line-height:1.6}
+.ask.small{font-size:14px}
+.inp.ta{height:auto;min-height:44px;padding:10px 11px;line-height:1.55;font-family:var(--font-body);font-weight:400;font-size:16px;resize:vertical}
+.opt{color:var(--muted)}
+.why{font-size:13px;color:var(--ink-2);background:color-mix(in srgb,var(--goal) 8%,var(--surface));border-radius:8px;padding:9px 12px}
+.why b{color:var(--ink);font-weight:600;margin-right:8px}
+.stepclock{font-size:14px;color:var(--ink-2)}
+.stepclock span{font:600 34px var(--font-data);color:var(--ink);font-variant-numeric:tabular-nums;margin-left:6px}
+.reveal{border:1px dashed var(--line-2);border-radius:8px;padding:11px 12px;display:grid;gap:6px;font-size:14.5px}
+.said{margin:0;display:grid;gap:2px}
+.said dt{font-size:12.5px;color:var(--ink-2);margin-top:6px}
+.said dt:first-child{margin-top:0}
+.said dd{margin:0;font-size:14.5px;overflow-wrap:anywhere}
+.grade{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.grade button{height:46px;border:1px solid var(--line-2);border-radius:8px;background:var(--surface);font-size:14.5px}
+.grade button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--surface)}
+.aid{display:grid;gap:8px;border-top:1px solid var(--line);padding-top:12px}
+.aid .btn{height:42px;font-size:14px}
+.cklist{display:grid;gap:8px}
+.cklist li{display:flex;align-items:center;gap:10px;font-size:14.5px}
+.cklist i{width:14px;height:14px;border-radius:50%;border:2px solid var(--goal);flex:none}
+.cklist li.on i{background:var(--goal)}
+.cklist span{margin-left:auto;font-size:12.5px;color:var(--ink-2)}
+.next{font-size:14.5px}
+.next b{display:block;font-weight:400;font-size:12.5px;color:var(--ink-2);letter-spacing:.08em}
+.method summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.method summary::-webkit-details-marker{display:none}
+.method summary::after{content:"展开";font:400 13px var(--font-body);color:var(--ink-2);letter-spacing:0}
+.method[open] summary::after{content:"收起"}
+.method-body{display:grid;gap:12px;margin-top:14px;font-size:14.5px}
+.mlist{display:grid;gap:10px;counter-reset:m}
+.mlist li{counter-increment:m;display:grid;grid-template-columns:22px minmax(0,1fr);column-gap:8px}
+.mlist li::before{content:counter(m);font:600 15px var(--font-data);color:var(--ink-2);grid-row:1 / span 3}
+.mlist b{font-weight:600}
+.mlist span{color:var(--ink-2);font-size:13px}
+.lib{border-top:1px solid var(--line-2)}
+.card{border-bottom:1px solid var(--line);padding:10px 0}
+.card summary{cursor:pointer;display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 12px;align-items:baseline;list-style:none}
+.card summary::-webkit-details-marker{display:none}
+.card summary b{font-weight:600;font-size:15px;overflow-wrap:anywhere}
+.card summary span{font-size:12.5px;color:var(--ink-2)}
+.card[open] summary{margin-bottom:8px}
+.card .said + .said{margin-top:8px}
+td.wrap{white-space:normal;min-width:150px}
+#logBody table{min-width:0}
+.shelf{display:grid;gap:18px}
+.shelf-block{display:grid;gap:8px}
+.shelf-block h3{font-size:14.5px;font-weight:600}
+.items{border-top:1px solid var(--line)}
+.items li{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14.5px}
+.items li.none{color:var(--ink-2);font-size:13.5px}
+.items .txt{flex:1 1 0;min-width:0;overflow-wrap:anywhere}
+.items .txt.off{color:var(--muted);text-decoration:line-through}
+.items .acts{flex:none;display:flex;gap:10px}
+.pill{flex:none;border:1px solid var(--line-2);border-radius:999px;background:var(--surface);font-size:12.5px;padding:3px 10px;line-height:1.4}
+.addrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.addrow .btn{height:44px;padding-inline:16px;font-size:14px}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header class="top">
+    <div>
+      <h1>学习航线</h1>
+      <p class="today" id="todayLine"></p>
+    </div>
+    <p class="status" id="status" data-mode="loading">正在读取…</p>
+  </header>
+
+  <div class="cols">
+    <div class="col">
+      <section class="hero" aria-labelledby="heroH">
+        <h2 id="heroH" class="sr">本周主目标</h2>
+        <div id="heroView">
+          <p class="eyebrow">本周主目标</p>
+          <p class="loading">正在读取你的记录…</p>
+        </div>
+
+        <form class="ged" id="unitForm" hidden novalidate>
+          <div>
+            <h3 id="uTitle">先定这周学什么</h3>
+            <p class="hint">一周只定一个概念和一个技能。概念选一个你现在讲不清的词；技能选一个 15 分钟内能做一遍的动作。</p>
+          </div>
+          <div class="field">
+            <label for="u-concept">这周要弄懂的一个概念</label>
+            <input class="inp text" type="text" id="u-concept" maxlength="60" placeholder="例如：机会成本">
+          </div>
+          <div class="field">
+            <label for="u-skill">这周要练的一个小技能</label>
+            <input class="inp text" type="text" id="u-skill" maxlength="60" placeholder="例如：把一个模糊的问题改写成能回答的问题">
+          </div>
+          <p class="msg" id="u-msg" role="alert"></p>
+          <div class="actions">
+            <button class="btn" type="submit" id="u-save">定下来</button>
+            <button class="btn ghost" type="button" id="u-cancel" hidden>取消</button>
+          </div>
+          <p id="u-newWrap" hidden><button class="link" type="button" id="u-new">结束这一轮，换一组新的</button></p>
+        </form>
+      </section>
+
+      <section class="panel guide" aria-labelledby="guideH">
+        <h2 class="sr" id="guideH">现在做什么</h2>
+        <div id="guideView"><p class="loading">正在读取…</p></div>
+      </section>
+
+      <details class="panel method" id="method">
+        <summary class="h2">这套方法是什么</summary>
+        <div class="method-body">
+          <p>app 不讲内容，它带你走流程。内容来自你的书、课程或和 AI 的对话。</p>
+          <ol class="mlist">
+            <li><b>先回想</b>不看资料，先写下自己记得什么或猜它是什么。<span>从脑子里往外拿，比再看一遍记得牢。</span></li>
+            <li><b>带着问题学</b>定一个问题，限时学 10 到 12 分钟。<span>注意力有落点，时间留给后面。</span></li>
+            <li><b>自己讲一遍</b>合上资料，用自己的话写：是什么、为什么需要、一个例子。<span>讲不出来的地方就是没懂的地方。</span></li>
+            <li><b>找缺口</b>写下它不是什么，把说不清的地方写成一个问题。<span>边界清楚了，才知道概念管到哪里。</span></li>
+            <li><b>隔天再讲</b>过一天以后不看笔记再讲一次，之后按 1、3、7、14、30 天复习。<span>当时会不等于过几天还会。</span></li>
+          </ol>
+          <p>概念算学完，要过四关：说清、举例、划界、隔天还讲得出。技能算练完，要有 3 次带目标、带反馈的练习。</p>
+          <p class="hint">依据：回想练习和间隔复习是学习研究里证据最强的两种方法；自己讲一遍来自费曼方法；技能部分来自刻意练习。</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="col">
+      <section class="panel" aria-labelledby="trendH">
+        <div class="panel-head">
+          <h2 class="h2" id="trendH">学习时间</h2>
+          <div class="seg" role="group" aria-label="时间范围">
+            <button type="button" id="r-14" data-range="14" aria-pressed="true">14 天</button>
+            <button type="button" id="r-30" data-range="30" aria-pressed="false">30 天</button>
+          </div>
+        </div>
+        <article class="chart solo">
+          <div class="chart-head"><h3><i></i>每天学了多久 <small>分钟</small></h3><p class="stat" id="s-min"></p></div>
+          <div class="plot" id="c-min"><div class="svgwrap"></div><div class="tip" hidden></div></div>
+        </article>
+      </section>
+
+      <section class="records" aria-labelledby="libH">
+        <h2 class="h2" id="libH">我讲得出的概念</h2>
+        <div id="libBody"></div>
+      </section>
+
+      <section class="records" aria-labelledby="logH">
+        <h2 class="h2" id="logH">学习记录</h2>
+        <div id="logBody"></div>
+        <p><button class="link" type="button" id="moreLog" hidden>显示更早的记录</button></p>
+      </section>
+
+      <section class="panel shelf" aria-labelledby="shelfH">
+        <h2 class="h2" id="shelfH">书单与长期目标</h2>
+        <div class="shelf-block">
+          <h3>书</h3>
+          <ul class="items" id="bookList"></ul>
+          <form class="addrow" id="bookForm" novalidate>
+            <label class="sr" for="b-title">书名</label>
+            <input class="inp text" type="text" id="b-title" maxlength="80" placeholder="书名">
+            <button class="btn ghost" type="submit">添加</button>
+          </form>
+        </div>
+        <div class="shelf-block">
+          <h3>长期目标</h3>
+          <ul class="items" id="goalList"></ul>
+          <form class="addrow" id="goalForm" novalidate>
+            <label class="sr" for="g-text">长期目标</label>
+            <input class="inp text" type="text" id="g-text" maxlength="120" placeholder="一句话写清想达到什么">
+            <button class="btn ghost" type="submit">添加</button>
+          </form>
+          <p class="msg" id="g-msg" role="alert"></p>
+          <p class="hint">没完成的长期目标最多放 3 个，放多了每个都推不动。</p>
+        </div>
+      </section>
+
+      <section class="panel backup" aria-labelledby="bkH">
+        <h2 class="h2" id="bkH">备份</h2>
+        <p id="bk-state">还没有内容，暂时不用备份。</p>
+        <div class="actions">
+          <button class="btn ghost" type="button" id="bk-export">导出备份</button>
+          <button class="btn ghost" type="button" id="bk-import">导入备份</button>
+          <input class="sr" type="file" id="bk-file" accept="application/json,.json,text/plain" tabindex="-1" aria-hidden="true">
+        </div>
+        <div class="confirm" id="bk-confirm" hidden>
+          <p id="bk-confirm-text"></p>
+          <div class="actions">
+            <button class="btn" type="button" id="bk-yes">确认导入</button>
+            <button class="btn ghost" type="button" id="bk-no">取消</button>
+          </div>
+        </div>
+        <p class="hint">内容只存在这台设备上。换手机或删除这个 app 之前先导出一份，存到“文件”里或发给自己。</p>
+      </section>
+
+      <p class="foot">版本 <span id="ver"></span></p>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* ---------- helpers ---------- */
+var $ = function(s, r){ return (r || document).querySelector(s); };
+var $$ = function(s, r){ return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+var pad = function(n){ return String(n).padStart(2, '0'); };
+var WEEK = ['一','二','三','四','五','六','日'];
+var esc = function(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); };
+var br = function(s){ return esc(s).replace(/\n/g, '<br>'); };
+
+function ymd(d){ return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+function parseYmd(s){ var p = s.split('-').map(Number); return new Date(p[0], p[1] - 1, p[2], 12); }
+function addDays(s, n){ var d = parseYmd(s); d.setDate(d.getDate() + n); return ymd(d); }
+function today(){ return ymd(new Date()); }
+function wdIndex(s){ return (parseYmd(s).getDay() + 6) % 7; }
+function md(s){ var d = parseYmd(s); return (d.getMonth() + 1) + '/' + d.getDate(); }
+function mdCn(s){ var d = parseYmd(s); return (d.getMonth() + 1) + '月' + d.getDate() + '日'; }
+function dayCn(s){ return mdCn(s) + ' 周' + WEEK[wdIndex(s)]; }
+function validDate(s){ return typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && ymd(parseYmd(s)) === s; }
+function daysBetween(a, b){ return Math.round((parseYmd(b) - parseYmd(a)) / 86400000); }
+function clampInt(v, lo, hi, dflt){ v = parseInt(v, 10); if (!isFinite(v)) return dflt; return Math.min(hi, Math.max(lo, v)); }
+function S(v, max){ return typeof v === 'string' ? v.trim().slice(0, max || 600) : ''; }
+function uid(){ return 'x' + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36); }
+function mmss(ms){ var s = Math.max(0, Math.floor(ms / 1000)); return pad(Math.floor(s / 60)) + ':' + pad(s % 60); }
+
+/* ---------- state ---------- */
+var APP_VERSION = '1.0.0';
+var LS_KEY = 'study-route.v1', BK_KEY = 'study-route.backupAt', DR_KEY = 'study-route.draft';
+var IV = [1, 3, 7, 14, 30, 60];          /* review intervals in days, by box */
+var REPS = 3;                             /* practice rounds that complete a skill */
+var KIND = { concept: '学概念', skill: '练技能', review: '复习' };
+var BOOK = { want: '想读', reading: '在读', done: '读完' };
+var FB = ['对照范例', '请人看', '让 AI 挑错', '录下来回看', '只凭自己感觉'];
+
+var state = { units: [], log: [], books: [], goals: [] };
+var ui = { ready: false, range: 14, form: null, wizOpen: false, review: null, confirmDel: null, confirmItem: null, showAllLog: false, confirmNew: false };
+var draft = null;
+var pendingImport = null;
+
+function cleanConcept(c){
+  c = c || {};
+  return {
+    name: S(c.name, 60), source: S(c.source, 200), guess: S(c.guess), what: S(c.what), why: S(c.why),
+    example: S(c.example), notThis: S(c.notThis), gap: S(c.gap),
+    said: Array.isArray(c.said) ? c.said.filter(function(x){ return x && validDate(x.date); }).map(function(x){ return { date: x.date, text: S(x.text) }; }).slice(-10) : [],
+    firstSaid: validDate(c.firstSaid) ? c.firstSaid : null,
+    sessions: clampInt(c.sessions, 0, 999, 0),
+    box: clampInt(c.box, -1, IV.length - 1, -1),
+    due: validDate(c.due) ? c.due : null,
+    lastReview: validDate(c.lastReview) ? c.lastReview : null,
+    recalledOn: validDate(c.recalledOn) ? c.recalledOn : null
+  };
+}
+function cleanSkill(k){
+  k = k || {};
+  return {
+    name: S(k.name, 60),
+    reps: Array.isArray(k.reps) ? k.reps.filter(function(r){ return r && validDate(r.date); }).map(function(r){
+      return { date: r.date, goal: S(r.goal), did: S(r.did), miss: S(r.miss), fb: S(r.fb, 20), next: S(r.next) };
+    }).slice(0, 50) : []
+  };
+}
+function cleanUnit(u){
+  if (!u || !validDate(u.start)) return null;
+  var c = cleanConcept(u.concept), k = cleanSkill(u.skill);
+  if (!c.name || !k.name) return null;
+  return { id: S(u.id, 40) || uid(), start: u.start, closed: !!u.closed, concept: c, skill: k };
+}
+function cleanLog(l){
+  if (!l || !validDate(l.date) || !KIND[l.kind]) return null;
+  return { id: S(l.id, 40) || uid(), date: l.date, kind: l.kind, title: S(l.title, 80), min: clampInt(l.min, 0, 600, 0) };
+}
+function cleanBook(b){ if (!b || !S(b.title, 80)) return null; return { id: S(b.id, 40) || uid(), title: S(b.title, 80), status: BOOK[b.status] ? b.status : 'want' }; }
+function cleanGoal(g){ if (!g || !S(g.text, 120)) return null; return { id: S(g.id, 40) || uid(), text: S(g.text, 120), done: !!g.done }; }
+function cleanState(o){
+  o = o || {};
+  var arr = function(a, f){ return Array.isArray(a) ? a.map(f).filter(Boolean) : []; };
+  return { units: arr(o.units, cleanUnit), log: arr(o.log, cleanLog), books: arr(o.books, cleanBook), goals: arr(o.goals, cleanGoal) };
+}
+
+/* ---------- storage: this device only ---------- */
+function load(){
+  try { var raw = window.localStorage.getItem(LS_KEY); if (raw) state = cleanState(JSON.parse(raw)); } catch (e) {}
+  try { var d = window.localStorage.getItem(DR_KEY); if (d){ d = JSON.parse(d); if (d && d.unitId && (d.kind === 'concept' || d.kind === 'skill') && unitById(d.unitId)){ d.f = d.f || {}; d.beat = Date.now(); draft = d; } } } catch (e) {}
+}
+function save(){
+  try { window.localStorage.setItem(LS_KEY, JSON.stringify(state)); return true; }
+  catch (e) { toast('这台设备的存储写不进去，可能是空间满了，或者浏览器开着无痕模式。'); return false; }
+}
+function saveDraft(){ try { if (draft) window.localStorage.setItem(DR_KEY, JSON.stringify(draft)); else window.localStorage.removeItem(DR_KEY); } catch (e) {} }
+
+/* ---------- the method ---------- */
+function unitById(id){ for (var i = 0; i < state.units.length; i++) if (state.units[i].id === id) return state.units[i]; return null; }
+function currentUnit(){ for (var i = state.units.length - 1; i >= 0; i--) if (!state.units[i].closed) return state.units[i]; return null; }
+function checks(c){ return [!!(c.what && c.why), !!c.example, !!c.notThis, !!c.recalledOn]; }
+var CHECK_NAME = ['说清', '举例', '划界', '隔天复述'];
+function conceptDone(c){ return checks(c).every(Boolean); }
+function skillDone(k){ return k.reps.length >= REPS; }
+function applyGrade(c, grade){
+  var t = today();
+  if (c.firstSaid === t){ c.lastReview = t; return; }   /* same-day recall is a warm-up: the schedule starts tomorrow */
+  if (grade === 'ok') c.box = Math.min((c.box < 0 ? 0 : c.box) + 1, IV.length - 1);
+  else if (grade === 'no') c.box = 0;
+  else c.box = Math.max(0, c.box);
+  c.due = addDays(t, IV[c.box]); c.lastReview = t;
+  if (grade === 'ok' && c.firstSaid && c.firstSaid < t && !c.recalledOn) c.recalledOn = t;
+}
+/* concepts whose review date has come; the unit being learned is handled inside its own session until it is finished */
+function dueList(){
+  var t = today(), cur = currentUnit();
+  return state.units.filter(function(u){
+    var c = u.concept;
+    if (!c.what || !c.due || c.due > t) return false;
+    return !(u === cur && !conceptDone(c));
+  });
+}
+function nextStep(){
+  var u = currentUnit(), due = dueList(), t = today();
+  if (draft && unitById(draft.unitId)) return { type: 'resume' };
+  if (due.length) return { type: 'review', due: due };
+  if (!u) return { type: 'setup' };
+  var c = u.concept, k = u.skill, cd = conceptDone(c), kd = skillDone(k);
+  if (cd && kd) return { type: 'done' };
+  if (!c.what) return { type: 'concept', alt: kd ? null : 'skill', first: true };
+  if (!cd){
+    var ck = checks(c), onlyWaiting = ck[0] && ck[1] && ck[2] && !ck[3];
+    if (c.firstSaid === t && onlyWaiting) return kd ? { type: 'wait' } : { type: 'skill', alt: 'concept', waiting: true };
+    if (c.firstSaid === t && !kd && k.reps.length === 0) return { type: 'skill', alt: 'concept', waiting: true };
+    return { type: 'concept', alt: kd ? null : 'skill' };
+  }
+  return { type: 'skill', alt: null };
+}
+
+/* ---------- header ---------- */
+function renderHeader(){
+  var el = $('#status');
+  el.dataset.mode = ui.ready ? 'local' : 'loading';
+  el.textContent = ui.ready ? '内容保存在这台设备上' : '正在读取…';
+  $('#todayLine').textContent = '今天 ' + dayCn(today());
+}
+
+/* ---------- hero: one concept, one skill ---------- */
+function routeHtml(labels, states){
+  var h = '';
+  labels.forEach(function(lb, i){
+    var st = states[i], cls = st === true ? 'is-met' : st === 'wait' ? 'is-future' : 'is-miss';
+    var word = st === true ? '已完成' : st === 'wait' ? '还没到时间' : '未完成';
+    h += '<li class="wp ' + cls + '"><span class="wd">' + lb + '</span><span class="dot"></span><span class="sr">' + word + '</span></li>';
+  });
+  return '<ol class="route n' + labels.length + '">' + h + '</ol>';
+}
+function renderHero(){
+  var view = $('#heroView'), form = $('#unitForm');
+  if (!ui.ready) return;
+  var u = currentUnit();
+  if (ui.form || !u){
+    view.hidden = true; form.hidden = false;
+    var mode = !u ? 'new' : ui.form;
+    $('#uTitle').textContent = mode === 'edit' ? '改一下名字' : state.units.length ? '定下一轮学什么' : '先定这周学什么';
+    $('#u-save').textContent = mode === 'edit' ? '保存' : '定下来';
+    $('#u-cancel').hidden = !u;
+    $('#u-newWrap').hidden = !(mode === 'edit');
+    return;
+  }
+  view.hidden = false; form.hidden = true;
+  var c = u.concept, k = u.skill, ck = checks(c), t = today();
+  var done = (conceptDone(c) ? 1 : 0) + (skillDone(k) ? 1 : 0);
+  var day = daysBetween(u.start, t) + 1;
+  var st = ck.slice();
+  if (!st[3] && (!c.firstSaid || c.firstSaid === t)) st[3] = 'wait';
+  var left = [];
+  var miss = CHECK_NAME.filter(function(_, i){ return !ck[i]; });
+  if (miss.length) left.push('概念还差：' + miss.join('、'));
+  if (!skillDone(k)) left.push('技能还差 ' + (REPS - k.reps.length) + ' 次');
+  var verdict = done === 2 ? '这一轮的概念和技能都完成了。' : left.join('。') + '。';
+  var reps = []; for (var i = 0; i < REPS; i++) reps.push(i < k.reps.length);
+  var labels = []; for (var j = 0; j < REPS; j++) labels.push('第 ' + (j + 1) + ' 次');
+  view.innerHTML =
+    '<div class="hero-top"><p class="eyebrow">本周主目标 · 第 ' + day + ' 天</p><button class="link" type="button" data-h="edit">调整</button></div>'
+    + '<h3 class="goal-title">一个概念，一个技能</h3>'
+    + '<div class="goal-row"><div class="count"><span class="num">' + done + '</span><span class="of">/ 2 完成</span></div><p class="verdict">' + esc(verdict) + '</p></div>'
+    + '<div class="track-block"><p class="tb-head"><span>概念</span><b>' + esc(c.name) + '</b></p>' + routeHtml(CHECK_NAME, st) + '</div>'
+    + '<div class="track-block"><p class="tb-head"><span>技能</span><b>' + esc(k.name) + '</b></p>' + routeHtml(labels, reps) + '</div>'
+    + (done === 2 ? '<div class="actions hero-actions"><button class="btn" type="button" data-h="new">开始下一轮</button></div>' : '');
+}
+function openForm(mode){
+  var u = currentUnit();
+  ui.form = mode; ui.confirmNew = false;
+  $('#u-concept').value = mode === 'edit' && u ? u.concept.name : '';
+  $('#u-skill').value = mode === 'edit' && u ? u.skill.name : '';
+  $('#u-msg').textContent = '';
+  $('#u-new').textContent = '结束这一轮，换一组新的';
+  render();
+}
+function submitUnit(ev){
+  ev.preventDefault();
+  var cn = S($('#u-concept').value, 60), sn = S($('#u-skill').value, 60), msg = $('#u-msg');
+  if (!cn || !sn){ msg.textContent = '概念和技能都要填一个。'; return; }
+  var u = currentUnit(), mode = !u ? 'new' : ui.form;
+  if (mode === 'edit'){ u.concept.name = cn; u.skill.name = sn; }
+  else {
+    if (u) u.closed = true;
+    if (draft){ draft = null; saveDraft(); ui.wizOpen = false; }
+    state.units.push({ id: uid(), start: today(), closed: false, concept: cleanConcept({ name: cn }), skill: cleanSkill({ name: sn }) });
+  }
+  if (!save()) return;
+  ui.form = null; msg.textContent = '';
+  toast(mode === 'edit' ? '已保存' : '定下来了');
+  render();
+}
+
+/* ---------- guided sessions ---------- */
+var STEPS = { concept: ['先回想', '带着问题学', '自己讲一遍', '找缺口', '收尾'], skill: ['定目标', '动手做', '对照结果', '下次改一处'] };
+var TIMED = { concept: 1, skill: 1 };     /* the step spent away from the app, reading or doing */
+
+function startSession(kind){
+  var u = currentUnit(); if (!u) return;
+  var c = u.concept, k = u.skill, f = {};
+  if (kind === 'concept'){
+    f.q = c.gap || '「' + c.name + '」要解决什么问题？';
+    f.source = c.source; f.what = c.what; f.why = c.why; f.example = c.example; f.notThis = c.notThis; f.gap = '';
+  } else { f.fb = ''; }
+  draft = { kind: kind, unitId: u.id, step: 0, elapsed: 0, stepMs: 0, beat: Date.now(), f: f, revealed: false, grade: null, first: kind === 'concept' && !c.what };
+  ui.wizOpen = true; ui.review = null;
+  saveDraft(); render(); focusGuide();
+}
+function focusGuide(){ var el = $('#guideView'); if (el && el.scrollIntoView) el.scrollIntoView({ block: 'start' }); }
+function tick(){
+  if (!draft || !ui.wizOpen) return;
+  var now = Date.now(), d = now - (draft.beat || now), timed = draft.step === TIMED[draft.kind];
+  d = Math.max(0, Math.min(d, timed ? 40 * 60000 : 15000));
+  draft.beat = now; draft.elapsed += d; if (timed) draft.stepMs += d;
+  draft.n = (draft.n || 0) + 1; if (draft.n % 10 === 0) saveDraft();
+  var a = $('[data-clock="total"]'); if (a) a.textContent = '已用 ' + mmss(draft.elapsed);
+  var b = $('[data-clock="step"]'); if (b) b.textContent = mmss(draft.stepMs);
+  var en = $('#w-enough'); if (en) en.hidden = draft.stepMs < (draft.kind === 'concept' ? 12 : 15) * 60000;
+}
+function ta(id, f, label, ph, rows, optional){
+  return '<div class="field"><label for="' + id + '">' + label + (optional ? ' <span class="opt">可不填</span>' : '') + '</label><textarea class="inp ta" id="' + id + '" data-f="' + f + '" rows="' + (rows || 3) + '" placeholder="' + esc(ph || '') + '">' + esc(draft.f[f] || '') + '</textarea></div>';
+}
+function gradeHtml(sel){
+  var g = [['ok', '讲得出'], ['fuzzy', '有点模糊'], ['no', '讲不出']];
+  return '<div class="grade" role="group" aria-label="这次讲得怎么样">' + g.map(function(x){ return '<button type="button" data-g="' + x[0] + '" aria-pressed="' + (sel === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div>';
+}
+function prevSaid(c){
+  var h = '<dl class="said">';
+  if (c.what) h += '<dt>是什么</dt><dd>' + br(c.what) + '</dd>';
+  if (c.why) h += '<dt>为什么需要</dt><dd>' + br(c.why) + '</dd>';
+  if (c.example) h += '<dt>例子</dt><dd>' + br(c.example) + '</dd>';
+  if (c.notThis) h += '<dt>不是什么</dt><dd>' + br(c.notThis) + '</dd>';
+  if (c.gap) h += '<dt>留下的问题</dt><dd>' + br(c.gap) + '</dd>';
+  return h + '</dl>';
+}
+function wizHtml(){
+  var u = unitById(draft.unitId), c = u.concept, k = u.skill, f = draft.f, kind = draft.kind, steps = STEPS[kind], n = steps.length, i = draft.step;
+  var name = kind === 'concept' ? c.name : k.name, body = '', why = '';
+  if (kind === 'concept'){
+    if (i === 0){
+      if (draft.first){
+        body = '<p class="ask">学之前先猜一猜：你觉得「' + esc(name) + '」是什么？它可能用来解决什么问题？</p>' + ta('w-recall', 'recall', '写下你的猜测', '写错没关系，一两句就行', 3, true);
+        why = '先从脑子里往外拿，再去看资料，会记得更牢，也能看清自己原来是怎么想的。';
+      } else {
+        body = '<p class="ask">不看笔记，把「' + esc(name) + '」讲一遍：它是什么，为什么需要它。</p>' + ta('w-recall', 'recall', '写下来，或者小声说出来', '', 3, true);
+        if (!draft.revealed) body += '<div class="actions"><button class="btn ghost" type="button" data-w="reveal">讲完了，对照上次写的</button></div>';
+        else {
+          body += '<div class="reveal"><p class="eyebrow">上次你写的</p>' + prevSaid(c) + '</div><p class="ask small">对照之后，这次讲得怎么样？</p>' + gradeHtml(draft.grade);
+          if (c.firstSaid === today()) body += '<p class="hint">“隔天复述”要到明天以后才算数，今天这次算热身。</p>';
+        }
+        why = '回想比重读有效。讲不出来不算失败，它告诉你该补哪里。';
+      }
+    } else if (i === 1){
+      body = '<div class="field"><label for="w-q">这次要回答的一个问题</label><input class="inp text" type="text" id="w-q" data-f="q" maxlength="200" value="' + esc(f.q || '') + '"></div>'
+        + '<div class="field"><label for="w-source">资料是什么 <span class="opt">可不填</span></label><input class="inp text" type="text" id="w-source" data-f="source" maxlength="200" placeholder="书名和页码、课程、链接" value="' + esc(f.source || '') + '"></div>'
+        + '<p class="ask">现在去看资料，学 10 到 12 分钟。带着上面的问题看，不用划线。</p>'
+        + '<p class="stepclock">已学 <span data-clock="step">' + mmss(draft.stepMs) + '</span></p><p class="hint" id="w-enough" hidden>到 12 分钟了，可以停下进入下一步。</p>';
+      why = '带着问题看，注意力有落点。限时是为了把时间留给下一步，自己讲那一步才是真正学会的地方。';
+    } else if (i === 2){
+      body = '<p class="ask">合上资料再写。想象讲给一个没学过的同事听，不用术语。</p>'
+        + ta('w-what', 'what', '它是什么', '一两句话', 3) + ta('w-why', 'why', '为什么需要它', '它解决什么问题', 2) + ta('w-example', 'example', '举一个你自己的例子', '工作或生活里一件具体的事', 3, true);
+      why = '能用自己的话讲出来才算懂。写不下去的地方就是还没懂的地方，回去只看那一段。';
+    } else if (i === 3){
+      body = ta('w-not', 'notThis', '它不是什么，容易和什么混', '一句话划清边界', 2, true) + ta('w-gap', 'gap', '还说不清的地方，写成一个问题', '下次从这个问题开始', 2, true)
+        + '<div class="aid"><p class="hint">手边有 AI 的话，可以让它当听众：只提问，不替你讲。</p><button class="btn ghost" type="button" data-w="copy">复制提问词</button></div>';
+      why = '划清边界才知道这个概念管到哪里。卡住的地方就是下次的起点。';
+    } else {
+      var merged = { what: S(f.what), why: S(f.why), example: S(f.example), notThis: S(f.notThis), recalledOn: c.recalledOn };
+      if (draft.grade === 'ok' && c.firstSaid && c.firstSaid < today()) merged.recalledOn = today();
+      var ck = checks(merged);
+      body = '<ul class="cklist">' + CHECK_NAME.map(function(nm, j){ return '<li class="' + (ck[j] ? 'on' : '') + '"><i></i>' + nm + '<span>' + (ck[j] ? '已过' : j === 3 ? '过一天以后再讲一次' : '这次没写') + '</span></li>'; }).join('') + '</ul>';
+      if (draft.first && S(f.recall)) body += '<div class="reveal"><p class="eyebrow">学之前你猜的</p><p>' + br(S(f.recall)) + '</p></div>';
+      var nx = S(f.gap) ? '先回答：' + S(f.gap) : !ck[3] ? '过一天以后，不看笔记把它讲一遍。' : ck.every(Boolean) ? '这个概念过了四关，之后按间隔复习。' : '把没写的那一项补上。';
+      body += '<p class="next"><b>下次</b>' + esc(nx) + '</p>'
+        + '<div class="field"><label for="w-min">这次用了多少分钟</label><div class="unit"><input class="inp" type="number" id="w-min" data-f="min" min="1" max="180" step="1" inputmode="numeric" value="' + esc(f.min || Math.max(1, Math.round(draft.elapsed / 60000))) + '"><span>分钟</span></div></div>';
+      why = '记下用时只是为了看趋势，不用凑时间。';
+    }
+  } else {
+    if (i === 0){
+      var last = k.reps.length ? k.reps[k.reps.length - 1] : null;
+      body = (last && last.next ? '<div class="reveal"><p class="eyebrow">上次留下要改的一处</p><p>' + br(last.next) + '</p></div>' : '')
+        + '<p class="ask">「' + esc(name) + '」这一次要做到什么？</p>' + ta('w-goal', 'goal', '这次的目标', '在什么条件下，做到什么。越具体越好', 3);
+      why = '目标具体，结束时才知道算不算做到。难度选“有点吃力但做得到”的。';
+    } else if (i === 1){
+      body = '<div class="reveal"><p class="eyebrow">这次的目标</p><p>' + br(S(f.goal)) + '</p></div><p class="ask">现在去做，10 到 15 分钟。</p>'
+        + '<p class="stepclock">已做 <span data-clock="step">' + mmss(draft.stepMs) + '</span></p><p class="hint" id="w-enough" hidden>到 15 分钟了，可以停下进入下一步。</p>';
+      why = '技能靠动手，不靠看。';
+    } else if (i === 2){
+      body = ta('w-did', 'did', '做到了什么', '对照目标写', 3) + ta('w-miss', 'miss', '没做到或卡住的地方', '', 2, true)
+        + '<div class="field"><span class="lab" id="fbLab">你拿什么判断做得好不好</span><div class="chips" role="radiogroup" aria-labelledby="fbLab">'
+        + FB.map(function(x, j){ return '<label class="chip"><input type="radio" name="w-fb" id="w-fb' + j + '" data-f="fb" value="' + x + '"' + (f.fb === x ? ' checked' : '') + '><span>' + x + '</span></label>'; }).join('') + '</div></div>';
+      why = '没有反馈的练习只是重复。只凭自己感觉最不可靠，下次尽量换一种。';
+    } else {
+      body = ta('w-next', 'next', '下次只改一处，改什么', '', 2)
+        + '<div class="field"><label for="w-min">这次用了多少分钟</label><div class="unit"><input class="inp" type="number" id="w-min" data-f="min" min="1" max="180" step="1" inputmode="numeric" value="' + esc(f.min || Math.max(1, Math.round(draft.elapsed / 60000))) + '"><span>分钟</span></div></div>';
+      why = '一次只改一处，才看得出是哪里起了作用。';
+    }
+  }
+  var dots = steps.map(function(s, j){ return '<li class="' + (j < i ? 'past' : j === i ? 'now' : '') + '"><span class="sr">' + s + '</span></li>'; }).join('');
+  return '<div class="wiz">'
+    + '<div class="wiz-head"><p class="eyebrow">' + KIND[kind] + '「' + esc(name) + '」· 第 ' + (i + 1) + ' 步，共 ' + n + ' 步</p><span class="clock" data-clock="total">已用 ' + mmss(draft.elapsed) + '</span></div>'
+    + '<ol class="dots">' + dots + '</ol><h3 class="wiz-title">' + steps[i] + '</h3>' + body
+    + '<p class="why"><b>为什么</b>' + why + '</p><p class="msg" id="w-msg" role="alert"></p>'
+    + '<div class="actions">' + (i > 0 ? '<button class="btn ghost" type="button" data-w="prev">上一步</button>' : '<button class="btn ghost" type="button" data-w="pause">先不做了</button>')
+    + '<button class="btn" type="button" data-w="next">' + (i === n - 1 ? '保存这次学习' : '下一步') + '</button></div></div>';
+}
+function wizNext(){
+  var f = draft.f, msg = $('#w-msg'), kind = draft.kind, n = STEPS[kind].length, i = draft.step;
+  var need = null;
+  if (kind === 'concept'){
+    if (i === 0 && !draft.first && !draft.grade) need = draft.revealed ? '选一下这次讲得怎么样。' : '先讲一遍，再点“对照上次写的”。';
+    if (i === 2 && !S(f.what)) need = '至少写一句“它是什么”。写不出来，就回去只看那一段再试。';
+  } else {
+    if (i === 0 && !S(f.goal)) need = '写一个具体的目标再开始。';
+    if (i === 2 && !S(f.did)) need = '写一句做到了什么。';
+    if (i === 3 && !S(f.next)) need = '写下次要改的一处。';
+  }
+  if (need){ msg.textContent = need; return; }
+  if (i < n - 1){ draft.step++; if (draft.step === TIMED[kind]) draft.beat = Date.now(); saveDraft(); render(); focusGuide(); return; }
+  finishSession();
+}
+function finishSession(){
+  var u = unitById(draft.unitId), f = draft.f, t = today();
+  var min = clampInt(f.min, 1, 180, Math.max(1, Math.round(draft.elapsed / 60000)));
+  if (draft.kind === 'concept'){
+    var c = u.concept;
+    if (draft.first && S(f.recall)) c.guess = S(f.recall);
+    if (S(f.source, 200)) c.source = S(f.source, 200);
+    var what = S(f.what);
+    if (what && what !== c.what){ c.said.push({ date: t, text: what }); if (c.said.length > 10) c.said.shift(); }
+    c.what = what; c.why = S(f.why); c.example = S(f.example); c.notThis = S(f.notThis); c.gap = S(f.gap);
+    if (!c.firstSaid && c.what) c.firstSaid = t;
+    c.sessions++;
+    if (draft.grade) applyGrade(c, draft.grade);
+    if (c.box < 0 && c.what){ c.box = 0; c.due = addDays(t, IV[0]); }
+    state.log.push({ id: uid(), date: t, kind: 'concept', title: c.name, min: min });
+  } else {
+    u.skill.reps.push({ date: t, goal: S(f.goal), did: S(f.did), miss: S(f.miss), fb: S(f.fb, 20), next: S(f.next) });
+    state.log.push({ id: uid(), date: t, kind: 'skill', title: u.skill.name, min: min });
+  }
+  if (!save()) return;
+  draft = null; ui.wizOpen = false; saveDraft();
+  toast('这次学习已保存');
+  render(); window.scrollTo(0, 0);
+}
+function aiPrompt(){
+  var u = unitById(draft.unitId), f = draft.f;
+  return '我在学「' + u.concept.name + '」。下面是我用自己的话写的解释。请你扮演一个没学过这个概念的同事，只针对你听不懂、或者我一笔带过的地方提问，一次问一个。不要替我解释，也不要夸我。\n\n它是什么：' + (S(f.what) || '（还没写）') + '\n为什么需要它：' + (S(f.why) || '（还没写）') + '\n我的例子：' + (S(f.example) || '（还没写）');
+}
+
+/* ---------- guide: what to do now ---------- */
+function reviewHtml(){
+  var u = unitById(ui.review.unitId), c = u.concept, left = dueList().length;
+  var h = '<div class="wiz"><div class="wiz-head"><p class="eyebrow">复习 · 还有 ' + left + ' 个到期</p></div><h3 class="wiz-title">' + esc(c.name) + '</h3>'
+    + '<p class="ask">不看笔记，把它讲一遍：是什么，为什么需要，举个例子。</p>'
+    + '<div class="field"><label for="rv-text">写下来，或者小声说出来 <span class="opt">可不填</span></label><textarea class="inp ta" id="rv-text" rows="3"></textarea></div>';
+  if (!ui.review.revealed) h += '<div class="actions"><button class="btn ghost" type="button" data-a="rv-quit">以后再说</button><button class="btn" type="button" data-a="rv-reveal">讲完了，对照</button></div>';
+  else h += '<div class="reveal"><p class="eyebrow">你上次写的</p>' + prevSaid(c) + '</div><p class="ask small">对照之后，这次讲得怎么样？</p>' + gradeHtml(null);
+  return h + '<p class="why"><b>为什么</b>隔几天再讲一次，才知道是真的记住了还是当时看着眼熟。讲得出，下次间隔拉长；讲不出，明天再来。</p></div>';
+}
+function renderGuide(){
+  var el = $('#guideView');
+  if (!ui.ready) return;
+  if (draft && ui.wizOpen && unitById(draft.unitId)){ el.innerHTML = wizHtml(); tick(); return; }
+  if (ui.review && unitById(ui.review.unitId)){ el.innerHTML = reviewHtml(); return; }
+  var ns = nextStep(), u = currentUnit(), h = '<p class="eyebrow">现在做什么</p>';
+  var btn = function(a, label, ghost){ return '<button class="btn' + (ghost ? ' ghost' : '') + '" type="button" data-a="' + a + '">' + label + '</button>'; };
+  if (ns.type === 'resume'){
+    var du = unitById(draft.unitId), nm = draft.kind === 'concept' ? du.concept.name : du.skill.name;
+    h += '<h3 class="guide-title">上次的学习还没做完</h3><p>' + KIND[draft.kind] + '「' + esc(nm) + '」停在第 ' + (draft.step + 1) + ' 步，已经写的内容都在。</p><div class="actions">' + btn('discard', '放弃这次', true) + btn('resume', '继续') + '</div>';
+  } else if (ns.type === 'review'){
+    h += '<h3 class="guide-title">先复习 ' + ns.due.length + ' 个到期的概念</h3><p>' + ns.due.map(function(x){ return '「' + esc(x.concept.name) + '」'; }).join('') + '。每个大约 2 分钟。</p><div class="actions">' + btn('review', '开始复习') + '</div>';
+  } else if (ns.type === 'setup'){
+    h += '<h3 class="guide-title">先在上面定下学什么</h3><p>定好之后，这里会一步一步带你学：先回想，再带着问题学，然后合上资料自己讲一遍。</p>';
+  } else if (ns.type === 'done'){
+    h += '<h3 class="guide-title">这一轮完成了</h3><p>概念过了四关，技能练满了 ' + REPS + ' 次。学过的概念会按间隔出现在复习里。</p><div class="actions">' + btn('new', '开始下一轮') + '</div>';
+  } else if (ns.type === 'wait'){
+    h += '<h3 class="guide-title">今天到这里</h3><p>「' + esc(u.concept.name) + '」只差“隔天复述”。明天以后回来，不看笔记把它讲一遍。</p>';
+  } else if (ns.type === 'concept'){
+    var c = u.concept;
+    h += '<h3 class="guide-title">学概念「' + esc(c.name) + '」</h3><p>' + (ns.first ? '第 1 次，大约 20 分钟。先猜，再带着问题学，然后合上资料自己讲一遍。' : '第 ' + (c.sessions + 1) + ' 次。先不看笔记讲一遍，再补上次留下的缺口。') + '</p>'
+      + '<div class="actions">' + (ns.alt ? btn('skill', '改练技能', true) : '') + btn('concept', '开始') + '</div>';
+  } else {
+    var k = u.skill;
+    h += '<h3 class="guide-title">练技能「' + esc(k.name) + '」</h3><p>第 ' + (k.reps.length + 1) + ' 次，大约 15 分钟。定一个具体目标，做一遍，对照结果。' + (ns.waiting ? '概念的“隔天复述”要等明天。' : '') + '</p>'
+      + '<div class="actions">' + (ns.alt ? btn('concept', '改学概念', true) : '') + btn('skill', '开始') + '</div>';
+  }
+  el.innerHTML = h;
+}
+
+/* ---------- chart: minutes per day ---------- */
+function frame(el, H){
+  var W = Math.floor(el.clientWidth);
+  if (W < 120) return null;
+  var m = { l: 40, r: 10, t: 12, b: 22 };
+  return { W: W, H: H, m: m, pw: W - m.l - m.r, ph: H - m.t - m.b };
+}
+function topRound(x, y, w, h, r){
+  r = Math.min(r, w / 2, h);
+  return 'M' + x + ',' + (y + h) + 'V' + (y + r) + 'Q' + x + ',' + y + ' ' + (x + r) + ',' + y + 'H' + (x + w - r) + 'Q' + (x + w) + ',' + y + ' ' + (x + w) + ',' + (y + r) + 'V' + (y + h) + 'Z';
+}
+function renderChart(){
+  var box = $('#c-min'), f = frame($('.svgwrap', box), 160); if (!f) return;
+  var t = today(), dates = [];
+  for (var i = ui.range - 1; i >= 0; i--) dates.push(addDays(t, -i));
+  var by = {}; state.log.forEach(function(l){ (by[l.date] = by[l.date] || []).push(l); });
+  var vals = dates.map(function(d){ return (by[d] || []).reduce(function(a, l){ return a + l.min; }, 0); });
+  var top = Math.max(30, Math.max.apply(null, vals)), unit = top <= 180 ? 30 : 60, max = Math.ceil(top / unit) * unit;
+  var step = f.pw / dates.length, bw = Math.min(14, Math.max(4, step * .56));
+  var y = function(v){ return f.m.t + f.ph - v / max * f.ph; };
+  var g = '';
+  [0, max / 2, max].forEach(function(v){
+    g += '<line class="' + (v === 0 ? 'base' : 'grid') + '" x1="' + f.m.l + '" x2="' + (f.W - f.m.r) + '" y1="' + y(v) + '" y2="' + y(v) + '"></line><text class="tick" x="' + (f.m.l - 7) + '" y="' + (y(v) + 4) + '" text-anchor="end">' + v + '</text>';
+  });
+  var marks = '', tips = [], times = 0, sum = 0;
+  vals.forEach(function(v, j){
+    var cx = f.m.l + step * (j + .5), d = dates[j], head = '<b>' + esc(dayCn(d)) + '</b><br>';
+    var ls = by[d] || [];
+    if (!ls.length){ tips.push(head + '没有学习记录'); return; }
+    times += ls.length; sum += v;
+    if (v > 0) marks += '<path class="m-study" d="' + topRound(cx - bw / 2, y(v), bw, y(0) - y(v), 4) + '"></path>';
+    tips.push(head + ls.map(function(l){ return KIND[l.kind] + ' ' + esc(l.title) + ' · ' + l.min + ' 分钟'; }).join('<br>'));
+  });
+  var k = Math.max(1, Math.ceil(46 / step)), xl = '';
+  for (var q = dates.length - 1; q >= 0; q -= k) xl += '<text class="tick" x="' + (f.m.l + step * (q + .5)) + '" y="' + (f.H - 5) + '" text-anchor="middle">' + (dates[q] === t ? '今天' : md(dates[q])) + '</text>';
+  var none = times ? '' : '<text class="none-text" x="' + (f.m.l + f.pw / 2) + '" y="' + (f.m.t + f.ph / 2 + 4) + '" text-anchor="middle">这段时间还没有学习记录</text>';
+  $('.svgwrap', box).innerHTML = '<svg width="' + f.W + '" height="' + f.H + '" viewBox="0 0 ' + f.W + ' ' + f.H + '" role="img" aria-label="每天的学习分钟数"><rect class="band" x="0" y="' + f.m.t + '" width="0" height="' + f.ph + '"></rect>' + g + marks + none + xl + '</svg>';
+  $('.tip', box).hidden = true;
+  box._m = { n: tips.length, x0: f.m.l, step: step, top: f.m.t, tips: tips };
+  $('#s-min').textContent = times ? ui.range + ' 天内 ' + times + ' 次 · 共 ' + sum + ' 分钟' : '';
+  $$('[data-range]').forEach(function(b){ b.setAttribute('aria-pressed', String(Number(b.dataset.range) === ui.range)); });
+}
+function wireChart(el){
+  var hide = function(){ var b = $('.band', el); if (b) b.style.display = 'none'; $('.tip', el).hidden = true; };
+  var show = function(ev){
+    var m = el._m, svg = $('svg', el); if (!m || !svg) return;
+    var r = svg.getBoundingClientRect(), i = Math.floor((ev.clientX - r.left - m.x0) / m.step);
+    if (i < 0 || i >= m.n){ hide(); return; }
+    var b = $('.band', el); b.setAttribute('x', m.x0 + i * m.step); b.setAttribute('width', m.step); b.style.display = 'block';
+    var tip = $('.tip', el); tip.innerHTML = m.tips[i]; tip.hidden = false;
+    var half = tip.offsetWidth / 2, cx = m.x0 + (i + .5) * m.step;
+    tip.style.left = Math.min(Math.max(cx, half), r.width - half) + 'px';
+    tip.style.top = (m.top + 2) + 'px';
+  };
+  el.addEventListener('pointermove', show);
+  el.addEventListener('pointerdown', show);
+  el.addEventListener('pointerleave', hide);
+}
+
+/* ---------- library: concepts in my own words ---------- */
+function renderLibrary(){
+  var box = $('#libBody'), t = today();
+  var us = state.units.filter(function(u){ return u.concept.what; }).slice().reverse();
+  if (!us.length){ box.innerHTML = '<p class="empty">' + (ui.ready ? '还没有。用自己的话讲过一遍的概念会收在这里，并按间隔提醒你复习。' : '正在读取…') + '</p>'; return; }
+  box.innerHTML = '<div class="lib">' + us.map(function(u){
+    var c = u.concept, ck = checks(c).filter(Boolean).length;
+    var due = !c.due ? '' : c.due <= t ? '今天该复习' : '下次复习 ' + mdCn(c.due);
+    var h = '<details class="card"><summary><b>' + esc(c.name) + '</b><span>过了 ' + ck + ' / 4 关' + (due ? ' · ' + due : '') + '</span></summary>' + prevSaid(c);
+    var extra = '';
+    if (c.guess) extra += '<dt>学之前的猜测</dt><dd>' + br(c.guess) + '</dd>';
+    if (c.source) extra += '<dt>资料</dt><dd>' + br(c.source) + '</dd>';
+    if (c.said.length > 1) extra += '<dt>改过几版</dt><dd>“它是什么”写过 ' + c.said.length + ' 版，第一版是 ' + mdCn(c.said[0].date) + ' 写的：' + br(c.said[0].text) + '</dd>';
+    if (u.skill.reps.length) extra += '<dt>同一轮的技能</dt><dd>' + esc(u.skill.name) + '，练了 ' + u.skill.reps.length + ' 次。' + (u.skill.reps[u.skill.reps.length - 1].next ? '最后留下要改的：' + br(u.skill.reps[u.skill.reps.length - 1].next) : '') + '</dd>';
+    return h + (extra ? '<dl class="said">' + extra + '</dl>' : '') + '</details>';
+  }).join('') + '</div>';
+}
+
+/* ---------- log ---------- */
+function renderLog(){
+  var box = $('#logBody'), rows = state.log.slice().sort(function(a, b){ return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; });
+  if (!rows.length){ box.innerHTML = '<p class="empty">' + (ui.ready ? '还没有记录。完成一次学习后，这里会出现第一行。' : '正在读取…') + '</p>'; $('#moreLog').hidden = true; return; }
+  var shown = ui.showAllLog ? rows : rows.slice(0, 10);
+  var h = '<div class="tablewrap"><table><thead><tr><th scope="col">日期</th><th scope="col">做了什么</th><th scope="col">分钟</th><th scope="col"><span class="sr">操作</span></th></tr></thead><tbody>';
+  shown.forEach(function(l){
+    var acts = ui.confirmDel === l.id
+      ? '<button class="link danger" type="button" data-l="del" data-id="' + l.id + '">确认删除</button><button class="link" type="button" data-l="keep">不删</button>'
+      : '<button class="link" type="button" data-l="ask" data-id="' + l.id + '">删</button>';
+    h += '<tr><td>' + esc(dayCn(l.date)) + '</td><td class="wrap">' + KIND[l.kind] + ' ' + esc(l.title) + '</td><td class="num">' + l.min + '</td><td class="acts">' + acts + '</td></tr>';
+  });
+  box.innerHTML = h + '</tbody></table></div>';
+  var more = $('#moreLog');
+  more.hidden = ui.showAllLog || rows.length <= 10;
+  more.textContent = '显示更早的 ' + (rows.length - 10) + ' 条';
+}
+
+/* ---------- books and long-term goals ---------- */
+function itemActs(type, id){
+  return ui.confirmItem === id
+    ? '<button class="link danger" type="button" data-i="del" data-t="' + type + '" data-id="' + id + '">确认删除</button><button class="link" type="button" data-i="keep">不删</button>'
+    : '<button class="link" type="button" data-i="ask" data-id="' + id + '">删</button>';
+}
+function renderShelf(){
+  $('#bookList').innerHTML = state.books.length ? state.books.map(function(b){
+    return '<li><button class="pill" type="button" data-i="book" data-id="' + b.id + '" aria-label="状态：' + BOOK[b.status] + '，点一下切换">' + BOOK[b.status] + '</button><span class="txt' + (b.status === 'done' ? ' off' : '') + '">' + esc(b.title) + '</span><span class="acts">' + itemActs('book', b.id) + '</span></li>';
+  }).join('') : '<li class="none">还没有书。</li>';
+  $('#goalList').innerHTML = state.goals.length ? state.goals.map(function(g){
+    return '<li><button class="pill" type="button" data-i="goal" data-id="' + g.id + '" aria-label="' + (g.done ? '已完成' : '进行中') + '，点一下切换">' + (g.done ? '已完成' : '进行中') + '</button><span class="txt' + (g.done ? ' off' : '') + '">' + esc(g.text) + '</span><span class="acts">' + itemActs('goal', g.id) + '</span></li>';
+  }).join('') : '<li class="none">还没有长期目标。</li>';
+}
+
+/* ---------- backup ---------- */
+function hasContent(){ return state.units.length || state.log.length || state.books.length || state.goals.length; }
+function renderBackup(){
+  var at = null; try { at = window.localStorage.getItem(BK_KEY); } catch (e) {}
+  var el = $('#bk-state'), n = state.units.length;
+  $('#bk-export').disabled = !hasContent();
+  if (!hasContent()) el.textContent = '还没有内容，暂时不用备份。';
+  else if (!validDate(at)) el.textContent = '有 ' + n + ' 轮学习、' + state.log.length + ' 条记录，还没有备份过。';
+  else {
+    var gap = daysBetween(at, today());
+    el.textContent = '有 ' + n + ' 轮学习、' + state.log.length + ' 条记录。上次备份是' + (gap === 0 ? '今天' : mdCn(at)) + (gap >= 14 ? '，已经过去 ' + gap + ' 天，建议再导出一次。' : '。');
+  }
+}
+function exportBackup(){
+  var text = JSON.stringify({ app: 'study-route', format: 1, exportedAt: new Date().toISOString(), units: state.units, log: state.log, books: state.books, goals: state.goals }, null, 1);
+  var name = 'study-route-backup-' + today() + '.json';
+  var mark = function(){ try { window.localStorage.setItem(BK_KEY, today()); } catch (e) {} renderBackup(); };
+  var viaLink = function(){
+    var url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+    var a = document.createElement('a'); a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 5000);
+    mark(); toast('备份文件已生成：' + name);
+  };
+  try {
+    var file = new File([text], name, { type: 'application/json' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })){
+      navigator.share({ files: [file], title: '学习航线备份' }).then(function(){ mark(); toast('备份已导出'); }, function(e){ if (!e || e.name !== 'AbortError') viaLink(); });
+      return;
+    }
+  } catch (e) {}
+  viaLink();
+}
+function readBackup(file){
+  var fr = new FileReader();
+  fr.onerror = function(){ toast('这个文件读不出来。'); };
+  fr.onload = function(){
+    var o = null; try { o = JSON.parse(String(fr.result)); } catch (e) {}
+    if (!o || typeof o !== 'object' || o.app !== 'study-route'){ toast('这不是学习航线的备份文件。'); return; }
+    var p = cleanState(o);
+    if (!p.units.length && !p.log.length && !p.books.length && !p.goals.length){ toast('备份里没有可用的内容。'); return; }
+    pendingImport = p;
+    $('#bk-confirm-text').textContent = '备份里有 ' + p.units.length + ' 轮学习、' + p.log.length + ' 条记录、' + p.books.length + ' 本书、' + p.goals.length + ' 个长期目标。导入后会和现有内容合并，相同的以备份为准。';
+    $('#bk-confirm').hidden = false;
+  };
+  fr.readAsText(file);
+}
+function mergeById(cur, inc){
+  var map = {}, order = [];
+  cur.concat(inc).forEach(function(x){ if (!(x.id in map)) order.push(x.id); map[x.id] = x; });
+  return order.map(function(id){ return map[id]; });
+}
+function applyImport(){
+  if (!pendingImport) return;
+  var p = pendingImport; pendingImport = null; $('#bk-confirm').hidden = true;
+  state.units = mergeById(state.units, p.units).sort(function(a, b){ return a.start < b.start ? -1 : a.start > b.start ? 1 : 0; });
+  state.log = mergeById(state.log, p.log); state.books = mergeById(state.books, p.books); state.goals = mergeById(state.goals, p.goals);
+  var open = state.units.filter(function(u){ return !u.closed; });
+  open.slice(0, -1).forEach(function(u){ u.closed = true; });
+  if (!save()) return;
+  render(); toast('已导入');
+}
+
+/* ---------- toast ---------- */
+var toastTimer = null;
+function toast(text){
+  var el = $('#toast'); el.textContent = text; el.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(function(){ el.hidden = true; }, 2800);
+}
+
+function render(){ renderHeader(); renderHero(); renderGuide(); renderChart(); renderLibrary(); renderLog(); renderShelf(); renderBackup(); }
+
+/* ---------- events ---------- */
+$('#unitForm').addEventListener('submit', submitUnit);
+$('#u-cancel').addEventListener('click', function(){ ui.form = null; render(); });
+$('#u-new').addEventListener('click', function(){
+  if (!ui.confirmNew){ ui.confirmNew = true; this.textContent = '这一轮还没完成。再点一次确认结束，已写的内容会留在“我讲得出的概念”里'; return; }
+  ui.form = 'new'; ui.confirmNew = false;
+  $('#u-concept').value = ''; $('#u-skill').value = ''; $('#u-msg').textContent = '';
+  render(); $('#u-concept').focus();
+});
+$('#heroView').addEventListener('click', function(ev){
+  var b = ev.target.closest('[data-h]'); if (!b) return;
+  openForm(b.dataset.h === 'edit' ? 'edit' : 'new');
+});
+
+$('#guideView').addEventListener('input', function(ev){
+  var f = ev.target.dataset && ev.target.dataset.f;
+  if (f && draft){ draft.f[f] = ev.target.value; saveDraft(); var m = $('#w-msg'); if (m) m.textContent = ''; }
+});
+$('#guideView').addEventListener('click', function(ev){
+  var g = ev.target.closest('[data-g]');
+  if (g){
+    if (ui.review){
+      var ru = unitById(ui.review.unitId);
+      applyGrade(ru.concept, g.dataset.g);
+      state.log.push({ id: uid(), date: today(), kind: 'review', title: ru.concept.name, min: 2 });
+      if (!save()) return;
+      var rest = dueList();
+      ui.review = rest.length ? { unitId: rest[0].id, revealed: false } : null;
+      toast(g.dataset.g === 'ok' ? '讲得出，下次 ' + mdCn(ru.concept.due) + ' 再复习' : '记下了，' + mdCn(ru.concept.due) + ' 再来一次');
+      render(); return;
+    }
+    if (draft){ draft.grade = g.dataset.g; saveDraft(); $$('#guideView [data-g]').forEach(function(x){ x.setAttribute('aria-pressed', String(x === g)); }); var m = $('#w-msg'); if (m) m.textContent = ''; }
+    return;
+  }
+  var w = ev.target.closest('[data-w]');
+  if (w && draft){
+    var act = w.dataset.w;
+    if (act === 'next') wizNext();
+    else if (act === 'prev'){ draft.step = Math.max(0, draft.step - 1); saveDraft(); render(); focusGuide(); }
+    else if (act === 'pause'){ ui.wizOpen = false; saveDraft(); render(); }
+    else if (act === 'reveal'){ draft.revealed = true; saveDraft(); render(); }
+    else if (act === 'copy'){
+      var text = aiPrompt();
+      var fallback = function(){ var t = document.createElement('textarea'); t.value = text; t.setAttribute('readonly', ''); t.className = 'inp ta'; t.rows = 6; w.replaceWith(t); t.focus(); t.select(); toast('自动复制不了，请长按上面的文字手动复制'); };
+      try { navigator.clipboard.writeText(text).then(function(){ toast('提问词已复制，粘贴给 AI 即可'); }, fallback); } catch (e) { fallback(); }
+    }
+    return;
+  }
+  var a = ev.target.closest('[data-a]'); if (!a) return;
+  var act2 = a.dataset.a;
+  if (act2 === 'concept' || act2 === 'skill') startSession(act2);
+  else if (act2 === 'resume'){ ui.wizOpen = true; draft.beat = Date.now(); render(); focusGuide(); }
+  else if (act2 === 'discard'){ draft = null; saveDraft(); render(); }
+  else if (act2 === 'review'){ var d = dueList(); if (d.length){ ui.review = { unitId: d[0].id, revealed: false }; render(); focusGuide(); } }
+  else if (act2 === 'rv-reveal'){ ui.review.revealed = true; var keep = $('#rv-text').value; render(); $('#rv-text').value = keep; }
+  else if (act2 === 'rv-quit'){ ui.review = null; render(); }
+  else if (act2 === 'new') openForm('new');
+});
+
+$$('[data-range]').forEach(function(b){ b.addEventListener('click', function(){ ui.range = Number(b.dataset.range); renderChart(); }); });
+wireChart($('#c-min'));
+
+$('#logBody').addEventListener('click', function(ev){
+  var b = ev.target.closest('[data-l]'); if (!b) return;
+  if (b.dataset.l === 'ask'){ ui.confirmDel = b.dataset.id; renderLog(); }
+  else if (b.dataset.l === 'keep'){ ui.confirmDel = null; renderLog(); }
+  else { state.log = state.log.filter(function(l){ return l.id !== b.dataset.id; }); ui.confirmDel = null; if (save()){ toast('已删除这条记录'); render(); } }
+});
+$('#moreLog').addEventListener('click', function(){ ui.showAllLog = true; renderLog(); });
+
+$('#bookForm').addEventListener('submit', function(ev){
+  ev.preventDefault();
+  var t = S($('#b-title').value, 80); if (!t) return;
+  state.books.push({ id: uid(), title: t, status: 'want' });
+  if (save()){ $('#b-title').value = ''; renderShelf(); renderBackup(); }
+});
+$('#goalForm').addEventListener('submit', function(ev){
+  ev.preventDefault();
+  var t = S($('#g-text').value, 120), msg = $('#g-msg'); if (!t) return;
+  if (state.goals.filter(function(g){ return !g.done; }).length >= 3){ msg.textContent = '已经有 3 个没完成的目标了。先把一个标成已完成或删掉，再加新的。'; return; }
+  msg.textContent = '';
+  state.goals.push({ id: uid(), text: t, done: false });
+  if (save()){ $('#g-text').value = ''; renderShelf(); renderBackup(); }
+});
+$('.shelf').addEventListener('click', function(ev){
+  var b = ev.target.closest('[data-i]'); if (!b) return;
+  var act = b.dataset.i, id = b.dataset.id;
+  if (act === 'ask'){ ui.confirmItem = id; renderShelf(); return; }
+  if (act === 'keep'){ ui.confirmItem = null; renderShelf(); return; }
+  if (act === 'del'){
+    if (b.dataset.t === 'book') state.books = state.books.filter(function(x){ return x.id !== id; });
+    else state.goals = state.goals.filter(function(x){ return x.id !== id; });
+    ui.confirmItem = null;
+  } else if (act === 'book'){
+    var order = ['want', 'reading', 'done'];
+    state.books.forEach(function(x){ if (x.id === id) x.status = order[(order.indexOf(x.status) + 1) % 3]; });
+  } else if (act === 'goal'){
+    var g = state.goals.filter(function(x){ return x.id === id; })[0];
+    if (g && g.done && state.goals.filter(function(x){ return !x.done; }).length >= 3){ $('#g-msg').textContent = '已经有 3 个没完成的目标了，这个先保持已完成。'; return; }
+    if (g) g.done = !g.done;
+  }
+  $('#g-msg').textContent = '';
+  if (save()){ renderShelf(); renderBackup(); }
+});
+
+$('#bk-export').addEventListener('click', exportBackup);
+$('#bk-import').addEventListener('click', function(){ $('#bk-file').click(); });
+$('#bk-file').addEventListener('change', function(){ var f = this.files && this.files[0]; this.value = ''; if (f) readBackup(f); });
+$('#bk-yes').addEventListener('click', applyImport);
+$('#bk-no').addEventListener('click', function(){ pendingImport = null; $('#bk-confirm').hidden = true; });
+
+setInterval(tick, 1000);
+var lastToday = today();
+document.addEventListener('visibilitychange', function(){
+  if (document.hidden){ saveDraft(); return; }
+  tick();
+  if (today() !== lastToday){ lastToday = today(); render(); }
+});
+window.addEventListener('pagehide', saveDraft);
+
+var rz = null;
+if (window.ResizeObserver) new ResizeObserver(function(){ clearTimeout(rz); rz = setTimeout(renderChart, 80); }).observe($('#c-min'));
+else window.addEventListener('resize', function(){ clearTimeout(rz); rz = setTimeout(renderChart, 120); });
+
+if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0){
+  window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
+}
+try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function(){}); } catch (e) {}
+
+/* ---------- boot ---------- */
+$('#ver').textContent = APP_VERSION;
+load();
+ui.ready = true;
+render();
+})();
+</script>
+</body>
+</html>
