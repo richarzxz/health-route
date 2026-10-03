@@ -1,7 +1,7 @@
-/* 健康航线 service worker
+/* 理财航线 service worker
    Online: always ask the network first, so a new version shows up the next time the app opens.
    Offline or slow network: fall back to the copy saved on this device. */
-const PREFIX = 'health-route-shell-';
+const PREFIX = 'money-route-shell-';
 const CACHE = PREFIX + 'v1';
 const SHELL = [
   './',
@@ -12,8 +12,6 @@ const SHELL = [
   './icon-512.png'
 ];
 const WAIT_MS = 3500;
-// other apps live in sub-folders of this address and have their own service workers
-const HOME = new URL('./', self.location.href).pathname;
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -24,7 +22,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
-      // only this app's own old caches: another app lives on the same address
+      // only this app's own old caches: another app may live on the same address
       .then((keys) => Promise.all(keys.filter((k) => k.startsWith(PREFIX) && k !== CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
@@ -40,9 +38,7 @@ function fromCache(request) {
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   if (request.method !== 'GET') return;
-  const url = new URL(request.url);
-  if (url.origin !== self.location.origin) return;
-  if (!url.pathname.startsWith(HOME) || url.pathname.slice(HOME.length).includes('/')) return;
+  if (new URL(request.url).origin !== self.location.origin) return;
 
   event.respondWith(new Promise((resolve, reject) => {
     let settled = false;

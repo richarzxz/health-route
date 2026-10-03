@@ -911,7 +911,9 @@ function wireChart(el){
   };
   el.addEventListener('pointermove', show);
   el.addEventListener('pointerdown', show);
-  el.addEventListener('pointerleave', hide);
+  /* a finger lifting off also fires pointerleave: keep the detail up after a tap, close it on a tap elsewhere */
+  el.addEventListener('pointerleave', function(ev){ if (ev.pointerType === 'mouse') hide(); });
+  document.addEventListener('pointerdown', function(ev){ if (!el.contains(ev.target)) hide(); });
 }
 
 /* ---------- records table ---------- */
@@ -944,7 +946,7 @@ function toast(text){
 }
 
 /* ---------- backup ---------- */
-var APP_VERSION = '1.0.0';
+var APP_VERSION = '1.0.1';
 var BK_KEY = 'health-route.backupAt';
 var pendingImport = null;
 function renderBackup(){
