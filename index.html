@@ -1,0 +1,1077 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>健康航线</title>
+<meta name="description" content="围绕一个每周主目标，记录睡眠、运动和体重。">
+<meta name="theme-color" content="#F1F4F6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F1417" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="健康航线">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=ZCOOL+XiaoWei&amp;family=Barlow+Semi+Condensed:wght@500;600&amp;display=swap" media="print" onload="this.media='all'">
+<style>
+html{-webkit-text-size-adjust:100%}
+:root{color-scheme:light}
+body{margin:0;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px);-webkit-tap-highlight-color:transparent}
+img{max-width:100%}
+[hidden]{display:none!important}
+/* Layout: a ship's log. The one weekly goal sits top-left as a route of seven waypoints;
+   the daily entry sits under it; trends and the record table run down the right (stacked on phones).
+   The chosen goal lends its color to the whole page. */
+:root{
+  --bg:#F1F4F6; --surface:#FFFFFF; --ink:#131C22; --ink-2:#4A5861; --muted:#76838C;
+  --line:#DDE3E7; --line-2:#C2CCD3; --danger:#B4302F;
+  --sleep:#2a78d6; --move:#eb6834; --weight:#1baf7a;
+  --font-display:"ZCOOL XiaoWei","Songti SC","STSong","Noto Serif SC",serif;
+  --font-body:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;
+  --font-data:"Barlow Semi Condensed","DIN Alternate","Bahnschrift","Roboto Condensed",-apple-system,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1417; --surface:#171E22; --ink:#E8EEF1; --ink-2:#A9B6BE; --muted:#85939B;
+    --line:#263038; --line-2:#3A474F; --danger:#F08A8A;
+    --sleep:#3987e5; --move:#d95926; --weight:#199e70;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1417; --surface:#171E22; --ink:#E8EEF1; --ink-2:#A9B6BE; --muted:#85939B;
+  --line:#263038; --line-2:#3A474F; --danger:#F08A8A;
+  --sleep:#3987e5; --move:#d95926; --weight:#199e70;
+  color-scheme:dark;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+h1,h2,h3,p,ol,ul,figure{margin:0}
+ol,ul{padding:0;list-style:none}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+
+.app{--goal:var(--sleep);max-width:1120px;margin-inline:auto;padding-inline:clamp(16px,4vw,32px);padding-block:22px 56px;display:grid;gap:20px}
+.app[data-goal="move"]{--goal:var(--move)}
+.app[data-goal="weight"]{--goal:var(--weight)}
+
+/* header */
+.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:6px 20px}
+.top h1{font-family:var(--font-display);font-weight:400;font-size:30px;line-height:1.15;letter-spacing:.04em}
+.today{color:var(--ink-2);font-size:13.5px}
+.status{font-size:12.5px;color:var(--ink-2);display:flex;align-items:center;gap:7px}
+.status::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--muted);flex:none}
+.status[data-mode="local"]::before{background:var(--goal)}
+
+.cols{display:grid;gap:20px;grid-template-columns:minmax(0,1fr)}
+.col{display:grid;grid-template-columns:minmax(0,1fr);gap:20px;min-width:0;align-content:start}
+@media (min-width:940px){.cols{grid-template-columns:minmax(0,410px) minmax(0,1fr);align-items:start}}
+
+/* shared panel */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px 18px 20px}
+.panel-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+.h2{font-family:var(--font-display);font-weight:400;font-size:19px;letter-spacing:.06em;line-height:1.3}
+.eyebrow{font-size:12.5px;color:var(--ink-2);letter-spacing:.08em}
+
+/* hero: the one goal */
+.hero{--hero-bg:color-mix(in srgb,var(--goal) 11%,var(--surface));background:var(--hero-bg);border:1px solid color-mix(in srgb,var(--goal) 38%,var(--line));border-radius:10px;padding:18px 18px 20px}
+.hero-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.goal-title{font-family:var(--font-display);font-weight:400;font-size:31px;line-height:1.2;letter-spacing:.02em;margin-top:6px;text-wrap:balance}
+.goal-title .n{font-family:var(--font-data);font-weight:600;font-size:1.08em;letter-spacing:0}
+.goal-sub{color:var(--ink-2);font-size:13.5px}
+.goal-row{display:flex;flex-wrap:wrap;align-items:flex-end;gap:6px 18px;margin-top:16px}
+.count{display:flex;align-items:baseline;gap:8px;font-family:var(--font-data);font-variant-numeric:tabular-nums}
+.count .num{font-size:66px;font-weight:600;line-height:.86}
+.count .of{font-size:19px;font-weight:500;color:var(--ink-2)}
+.verdict{flex:1 1 150px;min-width:0;font-size:14px;color:var(--ink);padding-bottom:2px}
+.loading{color:var(--ink-2);margin-top:10px}
+
+.route{position:relative;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));margin-top:20px}
+.route::before{content:"";position:absolute;left:calc(100% / 14);right:calc(100% / 14);top:34px;height:2px;background:var(--line-2)}
+.wp{position:relative;display:grid;justify-items:center;gap:6px;min-width:0}
+.wp .wd{height:18px;line-height:18px;font-size:12px;color:var(--ink-2)}
+.wp .dot{width:22px;height:22px;border-radius:50%;border:2px solid var(--line-2);background:var(--hero-bg)}
+.wp .val{height:16px;line-height:16px;font:500 12px var(--font-data);font-variant-numeric:tabular-nums;color:var(--ink-2)}
+.wp.is-met .dot{background:var(--goal);border-color:var(--goal)}
+.wp.is-miss .dot{border-color:var(--goal)}
+.wp.is-none .dot{transform:scale(.38);background:var(--line-2)}
+.wp.is-future .dot{border-style:dashed}
+.wp.is-today .wd{color:var(--ink);font-weight:600}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:12px;font-size:12px;color:var(--ink-2)}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend i{width:10px;height:10px;border-radius:50%;border:2px solid var(--goal);flex:none}
+.legend i.met{background:var(--goal)}
+.legend i.none{transform:scale(.5);background:var(--line-2);border-color:var(--line-2)}
+
+.track{position:relative;height:8px;border-radius:4px;background:color-mix(in srgb,var(--goal) 22%,var(--surface));margin-top:20px}
+.track-fill{position:absolute;inset:0 auto 0 0;border-radius:4px;background:var(--goal)}
+.track-mark{position:absolute;top:50%;width:16px;height:16px;border-radius:50%;background:var(--goal);border:3px solid var(--hero-bg);transform:translate(-50%,-50%)}
+.track-ends{display:flex;justify-content:space-between;margin-top:8px;font:500 12.5px var(--font-data);color:var(--ink-2);font-variant-numeric:tabular-nums}
+
+.step{margin-top:16px;padding-top:12px;border-top:1px solid color-mix(in srgb,var(--goal) 30%,var(--line));font-size:14px}
+.step b{display:block;font-weight:400;font-size:12.5px;color:var(--ink-2);letter-spacing:.08em}
+
+/* controls */
+.link{background:none;border:0;padding:4px 0;font-size:13px;color:var(--ink-2);text-decoration:underline;text-underline-offset:3px;flex:none}
+.link:hover{color:var(--ink)}
+.link.danger{color:var(--danger)}
+.btn{height:46px;padding-inline:20px;border-radius:8px;border:1px solid var(--ink);background:var(--ink);color:var(--surface);font-weight:600;font-size:15px}
+.btn:disabled{opacity:.55;cursor:default}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line-2);font-weight:400}
+.field{display:grid;gap:5px;min-width:0}
+.field > label,.field > .lab{font-size:12.5px;color:var(--ink-2)}
+.inp{width:100%;min-width:0;height:44px;padding:0 11px;border:1px solid var(--line-2);border-radius:8px;background:var(--surface);font-size:16px;font-family:var(--font-data);font-weight:500;font-variant-numeric:tabular-nums}
+.inp.text{font-family:var(--font-body);font-weight:400;font-size:16px}
+.inp::placeholder{color:var(--muted);font-weight:400}
+.unit{display:flex;align-items:center;gap:8px}
+.unit span{flex:none;font-size:13.5px;color:var(--ink-2)}
+.seg{display:inline-flex;border:1px solid var(--line-2);border-radius:8px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:transparent;padding:7px 14px;font-size:13.5px;line-height:1.3}
+.seg button + button{border-left:1px solid var(--line-2)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{position:relative}
+.chip input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.chip span{display:block;padding:6px 13px;border:1px solid var(--line-2);border-radius:999px;font-size:13.5px;line-height:1.3;background:var(--surface)}
+.chip input:checked + span{background:var(--ink);border-color:var(--ink);color:var(--surface)}
+.chip input:focus-visible + span{outline:2px solid var(--ink);outline-offset:2px}
+.hint{font-size:12.5px;color:var(--ink-2)}
+.msg{font-size:13px;color:var(--danger);min-height:0}
+
+/* goal editor */
+.ged{display:grid;gap:14px}
+.ged h3{font-family:var(--font-display);font-weight:400;font-size:25px;line-height:1.25;letter-spacing:.03em}
+.ged .seg{width:100%}
+.ged .seg button{flex:1 1 0}
+.pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.ged .inp{background:color-mix(in srgb,var(--surface) 82%,transparent)}
+.actions{display:flex;flex-wrap:wrap;gap:10px}
+.actions .btn{flex:1 1 140px}
+
+/* entry form */
+.entry{display:grid;gap:16px}
+.date-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:end}
+.date-row .mini{height:44px;padding-inline:13px;border:1px solid var(--line-2);border-radius:8px;background:var(--surface);font-size:13.5px}
+.groups{display:grid;gap:0}
+.grp{display:grid;gap:10px;padding-block:14px;border-top:1px solid var(--line);order:1}
+.grp.is-goal{order:0}
+.grp-head{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600}
+.grp-head i{width:10px;height:10px;border-radius:3px;flex:none}
+.grp[data-k="sleep"] .grp-head i{background:var(--sleep)}
+.grp[data-k="move"] .grp-head i{background:var(--move)}
+.grp[data-k="weight"] .grp-head i{background:var(--weight)}
+.tag{font-size:11.5px;font-weight:400;color:var(--ink-2);border:1px solid var(--line-2);border-radius:4px;padding:0 6px;line-height:18px}
+.derived{font-size:13px;color:var(--ink-2)}
+.derived:empty{display:none}
+.derived strong{font:600 15px var(--font-data);color:var(--ink);font-variant-numeric:tabular-nums}
+.save-row{display:grid;gap:8px;padding-top:4px}
+
+/* trends */
+.demo-note{font-size:13px;color:var(--ink);border:1px dashed var(--line-2);border-radius:8px;padding:8px 12px;margin-bottom:6px}
+.charts{display:flex;flex-direction:column}
+.chart{padding-block:16px;border-top:1px solid var(--line);order:1;min-width:0}
+.chart.is-goal{order:0}
+.chart-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:2px 12px;margin-bottom:8px}
+.chart-head h3{display:flex;align-items:center;gap:8px;font-size:14.5px;font-weight:600}
+.chart-head h3 i{width:10px;height:10px;border-radius:3px;flex:none}
+.chart[data-k="sleep"] h3 i{background:var(--sleep)}
+.chart[data-k="move"] h3 i{background:var(--move)}
+.chart[data-k="weight"] h3 i{background:var(--weight)}
+.chart-head h3 small{font-weight:400;font-size:12.5px;color:var(--ink-2)}
+.stat{font:500 13.5px var(--font-data);color:var(--ink-2);font-variant-numeric:tabular-nums}
+.plot{position:relative;min-width:0}
+.plot svg{display:block;touch-action:pan-y}
+.tip{position:absolute;z-index:2;pointer-events:none;transform:translate(-50%,-100%);background:var(--ink);color:var(--surface);border-radius:6px;padding:6px 10px;font-size:12.5px;line-height:1.5;white-space:nowrap;font-variant-numeric:tabular-nums}
+.tip b{font-weight:600}
+.grid{stroke:var(--line);stroke-width:1;fill:none}
+.base{stroke:var(--line-2);stroke-width:1;fill:none}
+.tick{fill:var(--muted);font:500 11px var(--font-data);font-variant-numeric:tabular-nums}
+.band{fill:var(--ink);opacity:.07;display:none}
+.target{stroke:var(--ink-2);stroke-width:1;stroke-dasharray:4 3;fill:none}
+.tlabel{fill:var(--ink-2);font:500 11px var(--font-data);paint-order:stroke;stroke:var(--surface);stroke-width:4px;stroke-linejoin:round}
+.vlabel{fill:var(--ink);font:600 13px var(--font-data);paint-order:stroke;stroke:var(--surface);stroke-width:4px;stroke-linejoin:round}
+.m-sleep{fill:var(--sleep)}
+.m-move{fill:var(--move)}
+.m-wline{stroke:var(--weight);stroke-width:2;fill:none;stroke-linejoin:round;stroke-linecap:round}
+.m-wdot{fill:var(--weight);stroke:var(--surface);stroke-width:2}
+.none-text{fill:var(--muted);font:400 13px var(--font-body)}
+
+/* records */
+.records{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;min-width:0}
+.tablewrap{position:relative;overflow-x:auto;border-top:1px solid var(--line-2)}
+table{border-collapse:collapse;width:100%;min-width:500px;font-size:13.5px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:9px 10px 9px 0;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-weight:400;font-size:12.5px;color:var(--ink-2)}
+td.num{font-family:var(--font-data);font-weight:500;font-size:14.5px}
+td.acts{text-align:right;padding-right:0}
+td.acts .link{margin-left:12px}
+.empty{padding:14px 0;color:var(--ink-2);font-size:13.5px;border-bottom:1px solid var(--line)}
+.foot{font-size:12.5px;color:var(--ink-2)}
+.backup{display:grid;gap:12px}
+.backup .btn{height:44px;font-size:14.5px}
+.confirm{display:grid;gap:10px;border:1px dashed var(--line-2);border-radius:8px;padding:12px;font-size:14px}
+
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:5;max-width:calc(100% - 32px);background:var(--ink);color:var(--surface);padding:10px 16px;border-radius:8px;font-size:14px}
+@media (max-width:420px){
+  .goal-title{font-size:27px}
+  .count .num{font-size:58px}
+  .panel,.hero{padding-inline:15px}
+}
+@media (prefers-reduced-motion:no-preference){
+  .wp .dot,.track-fill,.track-mark{transition:background-color .2s,border-color .2s,width .3s,left .3s}
+}
+</style>
+</head>
+<body>
+<div class="app" id="app" data-goal="sleep">
+  <header class="top">
+    <div>
+      <h1>健康航线</h1>
+      <p class="today" id="todayLine"></p>
+    </div>
+    <p class="status" id="status" data-mode="loading">正在读取…</p>
+  </header>
+
+  <div class="cols">
+    <div class="col">
+      <section class="hero" aria-labelledby="heroH">
+        <h2 id="heroH" class="sr">本周主目标</h2>
+        <div id="heroView">
+          <p class="eyebrow">本周主目标</p>
+          <p class="loading">正在读取你的记录…</p>
+        </div>
+
+        <form class="ged" id="goalEditor" hidden novalidate>
+          <div>
+            <h3 id="gedTitle">先定一件事</h3>
+            <p class="hint">睡眠、运动、体重都能记，但每周只盯一个目标。以后随时能换。</p>
+          </div>
+          <div class="seg" role="group" aria-label="主目标类型">
+            <button type="button" id="g-type-sleep" data-type="sleep" aria-pressed="true">早睡</button>
+            <button type="button" id="g-type-move" data-type="move" aria-pressed="false">运动</button>
+            <button type="button" id="g-type-weight" data-type="weight" aria-pressed="false">体重</button>
+          </div>
+
+          <div class="pair" data-for="sleep">
+            <div class="field"><label for="g-bed">入睡不晚于</label><input class="inp" type="time" id="g-bed" value="23:30"></div>
+            <div class="field"><label for="g-nights">每周做到</label><div class="unit"><input class="inp" type="number" id="g-nights" min="1" max="7" step="1" value="5" inputmode="numeric"><span>晚</span></div></div>
+          </div>
+          <div class="pair" data-for="move" hidden>
+            <div class="field"><label for="g-times">每周</label><div class="unit"><input class="inp" type="number" id="g-times" min="1" max="7" step="1" value="3" inputmode="numeric"><span>次</span></div></div>
+            <div class="field"><label for="g-min">每次至少</label><div class="unit"><input class="inp" type="number" id="g-min" min="5" max="300" step="5" value="20" inputmode="numeric"><span>分钟</span></div></div>
+          </div>
+          <div class="pair" data-for="weight" hidden>
+            <div class="field"><label for="g-wstart">起点</label><div class="unit"><input class="inp" type="number" id="g-wstart" min="20" max="300" step="0.1" inputmode="decimal" placeholder="68.5"><span>kg</span></div></div>
+            <div class="field"><label for="g-wtarget">目标</label><div class="unit"><input class="inp" type="number" id="g-wtarget" min="20" max="300" step="0.1" inputmode="decimal" placeholder="65.0"><span>kg</span></div></div>
+          </div>
+
+          <div class="field">
+            <label for="g-step">今天的一小步（可选）</label>
+            <input class="inp text" type="text" id="g-step" maxlength="60" placeholder="例如：23:00 把手机放到卧室外充电">
+            <p class="hint">写一个今天就能做的具体动作，它会显示在目标下面。</p>
+          </div>
+          <p class="msg" id="g-msg" role="alert"></p>
+          <div class="actions">
+            <button class="btn" type="submit" id="g-save">定下这个目标</button>
+            <button class="btn ghost" type="button" id="g-cancel" hidden>取消</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel" aria-labelledby="entryH">
+        <div class="panel-head"><h2 class="h2" id="entryH">记一笔</h2><span class="hint" id="f-dayname"></span></div>
+        <form class="entry" id="entry" novalidate>
+          <div class="date-row">
+            <div class="field"><label for="f-date">日期</label><input class="inp" type="date" id="f-date"></div>
+            <button class="mini" type="button" id="f-yest">昨天</button>
+            <button class="mini" type="button" id="f-today">今天</button>
+          </div>
+
+          <div class="groups">
+            <div class="grp" data-k="sleep" role="group" aria-labelledby="gh-sleep">
+              <div class="grp-head" id="gh-sleep"><i></i>睡眠<span class="tag" hidden>主目标</span></div>
+              <div class="pair">
+                <div class="field"><label for="f-bed" id="l-bed">昨晚入睡</label><input class="inp" type="time" id="f-bed"></div>
+                <div class="field"><label for="f-wake" id="l-wake">今早起床</label><input class="inp" type="time" id="f-wake"></div>
+              </div>
+              <p class="derived" id="f-dur"></p>
+            </div>
+
+            <div class="grp" data-k="move" role="group" aria-labelledby="gh-move">
+              <div class="grp-head" id="gh-move"><i></i>运动<span class="tag" hidden>主目标</span></div>
+              <div class="field"><label for="f-exmin">时长</label><div class="unit"><input class="inp" type="number" id="f-exmin" min="0" max="600" step="5" inputmode="numeric" placeholder="没运动就留空"><span>分钟</span></div></div>
+              <div class="chips" role="radiogroup" aria-label="运动类型">
+                <label class="chip"><input type="radio" name="extype" id="f-t1" value="走路"><span>走路</span></label>
+                <label class="chip"><input type="radio" name="extype" id="f-t2" value="跑步"><span>跑步</span></label>
+                <label class="chip"><input type="radio" name="extype" id="f-t3" value="骑车"><span>骑车</span></label>
+                <label class="chip"><input type="radio" name="extype" id="f-t4" value="力量"><span>力量</span></label>
+                <label class="chip"><input type="radio" name="extype" id="f-t5" value="球类"><span>球类</span></label>
+                <label class="chip"><input type="radio" name="extype" id="f-t6" value="其他"><span>其他</span></label>
+              </div>
+            </div>
+
+            <div class="grp" data-k="weight" role="group" aria-labelledby="gh-weight">
+              <div class="grp-head" id="gh-weight"><i></i>体重<span class="tag" hidden>主目标</span></div>
+              <div class="field"><label for="f-weight">早上空腹称最稳定</label><div class="unit"><input class="inp" type="number" id="f-weight" min="20" max="300" step="0.1" inputmode="decimal" placeholder="没称就留空"><span>kg</span></div></div>
+            </div>
+          </div>
+
+          <div class="save-row">
+            <p class="msg" id="f-msg" role="alert"></p>
+            <button class="btn" type="submit" id="f-save">保存这一天</button>
+            <p class="hint">三项都可以只填一部分。睡眠按起床那天记。</p>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <div class="col">
+      <section class="panel" aria-labelledby="trendH">
+        <div class="panel-head">
+          <h2 class="h2" id="trendH">趋势</h2>
+          <div class="seg" role="group" aria-label="时间范围">
+            <button type="button" id="r-14" data-range="14" aria-pressed="true">14 天</button>
+            <button type="button" id="r-30" data-range="30" aria-pressed="false">30 天</button>
+          </div>
+        </div>
+        <p class="demo-note" id="demoNote" hidden>下面是示例数据。保存第一条记录后，这里只显示你自己的数据。</p>
+        <div class="charts" id="charts">
+          <article class="chart" data-k="sleep">
+            <div class="chart-head"><h3><i></i>睡眠窗口 <small>入睡到起床</small></h3><p class="stat" id="s-sleep"></p></div>
+            <div class="plot" id="c-sleep"><div class="svgwrap"></div><div class="tip" hidden></div></div>
+          </article>
+          <article class="chart" data-k="move">
+            <div class="chart-head"><h3><i></i>运动 <small>分钟</small></h3><p class="stat" id="s-move"></p></div>
+            <div class="plot" id="c-move"><div class="svgwrap"></div><div class="tip" hidden></div></div>
+          </article>
+          <article class="chart" data-k="weight">
+            <div class="chart-head"><h3><i></i>体重 <small>kg</small></h3><p class="stat" id="s-weight"></p></div>
+            <div class="plot" id="c-weight"><div class="svgwrap"></div><div class="tip" hidden></div></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="records" aria-labelledby="recH">
+        <h2 class="h2" id="recH">全部记录</h2>
+        <div id="recBody"></div>
+        <p><button class="link" type="button" id="moreRows" hidden>显示更早的记录</button></p>
+      </section>
+
+      <section class="panel backup" aria-labelledby="bkH">
+        <h2 class="h2" id="bkH">备份</h2>
+        <p id="bk-state">还没有记录，暂时不用备份。</p>
+        <div class="actions">
+          <button class="btn ghost" type="button" id="bk-export">导出备份</button>
+          <button class="btn ghost" type="button" id="bk-import">导入备份</button>
+          <input class="sr" type="file" id="bk-file" accept="application/json,.json,text/plain" tabindex="-1" aria-hidden="true">
+        </div>
+        <div class="confirm" id="bk-confirm" hidden>
+          <p id="bk-confirm-text"></p>
+          <div class="actions">
+            <button class="btn" type="button" id="bk-yes">确认导入</button>
+            <button class="btn ghost" type="button" id="bk-no">取消</button>
+          </div>
+        </div>
+        <p class="hint">记录只存在这台设备上。换手机或删除这个 app 之前先导出一份，存到“文件”里或发给自己。</p>
+      </section>
+
+      <p class="foot">这些数字只用来看自己的趋势，不是医疗诊断。身体不舒服时以医生的判断为准。<br>版本 <span id="ver"></span></p>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* ---------- small helpers ---------- */
+var $ = function(s, r){ return (r || document).querySelector(s); };
+var $$ = function(s, r){ return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+var pad = function(n){ return String(n).padStart(2, '0'); };
+var WEEK = ['一','二','三','四','五','六','日'];
+var esc = function(s){ return String(s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); };
+
+function ymd(d){ return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+function parseYmd(s){ var p = s.split('-').map(Number); return new Date(p[0], p[1] - 1, p[2], 12); }
+function addDays(s, n){ var d = parseYmd(s); d.setDate(d.getDate() + n); return ymd(d); }
+function today(){ return ymd(new Date()); }
+function wdIndex(s){ return (parseYmd(s).getDay() + 6) % 7; }
+function weekStart(s){ return addDays(s, -wdIndex(s)); }
+function md(s){ var d = parseYmd(s); return (d.getMonth() + 1) + '/' + d.getDate(); }
+function mdCn(s){ var d = parseYmd(s); return (d.getMonth() + 1) + '月' + d.getDate() + '日'; }
+function dayCn(s){ return mdCn(s) + ' 周' + WEEK[wdIndex(s)]; }
+function validDate(s){ return typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && ymd(parseYmd(s)) === s; }
+
+/* clock maths: a night is laid out on one line by pushing times before noon to the next day */
+function toMin(t){
+  if (typeof t !== 'string' || !/^\d{1,2}:\d{2}$/.test(t)) return null;
+  var p = t.split(':').map(Number);
+  if (p[0] > 23 || p[1] > 59) return null;
+  return p[0] * 60 + p[1];
+}
+function norm(m){ return m < 720 ? m + 1440 : m; }
+function fmtClock(m){ m = ((Math.round(m) % 1440) + 1440) % 1440; return pad(Math.floor(m / 60)) + ':' + pad(m % 60); }
+function sleepOf(rec){
+  var b = toMin(rec.bed), w = toMin(rec.wake);
+  if (b == null || w == null) return null;
+  var dur = (((w - b) % 1440) + 1440) % 1440;
+  if (dur === 0) return null;
+  var bn = norm(b);
+  return { bed: bn, wake: bn + dur, dur: dur };
+}
+function fmtDur(m){ m = Math.round(m); var h = Math.floor(m / 60), r = m % 60; return h + ' 小时' + (r ? ' ' + pad(r) + ' 分' : ''); }
+function fmtDurShort(m){ m = Math.round(m); return Math.floor(m / 60) + '时' + pad(m % 60) + '分'; }
+function kg(v){ return (Math.round(v * 10) / 10).toFixed(1); }
+function clampInt(v, lo, hi, dflt){ v = parseInt(v, 10); if (!isFinite(v)) return dflt; return Math.min(hi, Math.max(lo, v)); }
+function numIn(v, lo, hi){ v = parseFloat(v); return isFinite(v) && v >= lo && v <= hi ? v : null; }
+
+/* ---------- state ---------- */
+var UNIT = { sleep: '晚', move: '次', weight: '天' };
+var state = { days: {}, goal: null, ready: false, range: 14, editing: false, edType: 'sleep', formDate: today(), showAll: false, confirmDel: null, busy: false };
+var store = { mode: 'loading' };
+var formDirty = false;
+var LS_KEY = 'health-route.v1';
+
+function cleanGoal(g){
+  if (!g || !UNIT[g.type]) return null;
+  if (g.type === 'weight' && (numIn(g.wStart, 20, 300) == null || numIn(g.wTarget, 20, 300) == null)) return null;
+  return {
+    type: g.type,
+    bedTarget: toMin(g.bedTarget) != null ? fmtClock(toMin(g.bedTarget)) : '23:30',
+    nights: clampInt(g.nights, 1, 7, 5),
+    exTimes: clampInt(g.exTimes, 1, 7, 3),
+    exMin: clampInt(g.exMin, 5, 300, 20),
+    wStart: numIn(g.wStart, 20, 300),
+    wTarget: numIn(g.wTarget, 20, 300),
+    step: typeof g.step === 'string' ? g.step.slice(0, 60) : ''
+  };
+}
+function cleanRec(v){
+  if (!v || !validDate(v.date)) return null;
+  var r = { date: v.date };
+  if (toMin(v.bed) != null) r.bed = fmtClock(toMin(v.bed));
+  if (toMin(v.wake) != null) r.wake = fmtClock(toMin(v.wake));
+  var ex = parseInt(v.exMin, 10);
+  if (isFinite(ex) && ex > 0 && ex <= 600){ r.exMin = ex; if (typeof v.exType === 'string' && v.exType) r.exType = v.exType.slice(0, 12); }
+  var w = numIn(v.weight, 20, 300);
+  if (w != null) r.weight = Math.round(w * 10) / 10;
+  return r;
+}
+
+/* ---------- storage: the account's private store when available, this browser otherwise ---------- */
+function readLocal(){
+  try { var raw = window.localStorage.getItem(LS_KEY); if (!raw) return; var o = JSON.parse(raw);
+    state.goal = cleanGoal(o.goal);
+    var m = {}; Object.keys(o.days || {}).forEach(function(k){ var r = cleanRec(o.days[k]); if (r) m[r.date] = r; });
+    state.days = m;
+  } catch (e) {}
+}
+function writeLocal(){
+  try { window.localStorage.setItem(LS_KEY, JSON.stringify({ goal: state.goal, days: state.days })); return true; }
+  catch (e) { return false; }
+}
+function becomeReady(){
+  if (state.ready) return;
+  state.ready = true;
+  fillForm(state.formDate);
+}
+function useLocal(){
+  store.mode = 'local';
+  readLocal();
+  becomeReady();
+  render();
+}
+function initStore(){
+  useLocal();
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function(){}); } catch (e) {}
+}
+function why(e){
+  return '这台设备的存储写不进去，可能是空间满了，或者浏览器开着无痕模式。';
+}
+function saveDay(rec){
+  state.days[rec.date] = rec;
+  return writeLocal() ? Promise.resolve() : Promise.reject({ code: 'local' });
+}
+function removeDay(date){
+  delete state.days[date];
+  return writeLocal() ? Promise.resolve() : Promise.reject({ code: 'local' });
+}
+function saveGoal(g){
+  state.goal = g;
+  return writeLocal() ? Promise.resolve() : Promise.reject({ code: 'local' });
+}
+
+/* ---------- goal logic ---------- */
+/* true = reached, false = recorded but not reached, null = nothing recorded for the goal that day */
+function met(goal, rec){
+  if (!rec) return null;
+  if (goal.type === 'sleep'){ var b = toMin(rec.bed); return b == null ? null : norm(b) <= norm(toMin(goal.bedTarget)); }
+  if (goal.type === 'move') return rec.exMin == null ? null : rec.exMin >= goal.exMin;
+  return rec.weight == null ? null : true;
+}
+function goalValue(goal, rec){
+  if (!rec) return '';
+  if (goal.type === 'sleep') return rec.bed || '';
+  if (goal.type === 'move') return rec.exMin != null ? rec.exMin + '分' : '';
+  return rec.weight != null ? kg(rec.weight) : '';
+}
+function latestWeight(){
+  var ds = Object.keys(state.days).filter(function(d){ return state.days[d].weight != null; }).sort();
+  return ds.length ? state.days[ds[ds.length - 1]] : null;
+}
+
+/* ---------- render: header ---------- */
+function renderStatus(){
+  var el = $('#status');
+  el.dataset.mode = store.mode;
+  el.textContent = store.mode === 'local' ? '记录保存在这台设备上' : '正在读取…';
+  $('#todayLine').textContent = '今天 ' + dayCn(today());
+}
+
+/* ---------- render: the goal ---------- */
+function routeHtml(g){
+  var t = today(), ws = weekStart(t), html = '';
+  for (var i = 0; i < 7; i++){
+    var d = addDays(ws, i), rec = state.days[d], m = met(g, rec);
+    var cls = d > t ? 'is-future' : m === true ? 'is-met' : m === false ? 'is-miss' : 'is-none';
+    if (d === t) cls += ' is-today';
+    var word = d > t ? '还没到' : m === true ? '达成' : m === false ? '未达成' : '没有记录';
+    html += '<li class="wp ' + cls + '" title="' + esc(dayCn(d) + ' ' + word) + '"><span class="wd">' + (d === t ? '今天' : WEEK[i]) + '</span><span class="dot"></span><span class="val">' + esc(goalValue(g, rec)) + '</span><span class="sr">' + word + '</span></li>';
+  }
+  return '<ol class="route">' + html + '</ol>';
+}
+function renderHero(){
+  var view = $('#heroView'), ed = $('#goalEditor'), app = $('#app');
+  if (!state.ready){ view.hidden = false; ed.hidden = true; return; }
+  var g = state.goal;
+  if (!g || state.editing){
+    view.hidden = true; ed.hidden = false; app.dataset.goal = state.edType;
+    $('#gedTitle').textContent = g ? '调整主目标' : '先定一件事';
+    $('#g-save').textContent = g ? '保存目标' : '定下这个目标';
+    $('#g-cancel').hidden = !g;
+    return;
+  }
+  view.hidden = false; ed.hidden = true; app.dataset.goal = g.type;
+  var t = today(), ws = weekStart(t);
+  var title, sub, body;
+  var head = '<div class="hero-top"><p class="eyebrow">本周主目标 · ' + mdCn(ws) + '–' + mdCn(addDays(ws, 6)) + '</p><button class="link" type="button" id="editGoal">调整目标</button></div>';
+
+  if (g.type === 'weight'){
+    title = '体重到 <span class="n">' + kg(g.wTarget) + '</span> kg';
+    sub = '起点 ' + kg(g.wStart) + ' kg';
+    var lw = latestWeight(), p = 0, verdict;
+    if (!lw){ verdict = '还没有体重记录，先称一次。'; }
+    else {
+      var span = g.wTarget - g.wStart;
+      p = span === 0 ? 1 : Math.min(1, Math.max(0, (lw.weight - g.wStart) / span));
+      var reached = g.wStart >= g.wTarget ? lw.weight <= g.wTarget : lw.weight >= g.wTarget;
+      verdict = (reached ? '已经到目标了。' : '距目标还有 ' + kg(Math.abs(lw.weight - g.wTarget)) + ' kg。') + '最近一次是' + (lw.date === t ? '今天' : mdCn(lw.date)) + '称的。';
+    }
+    body = '<div class="goal-row"><div class="count"><span class="num">' + (lw ? kg(lw.weight) : '–') + '</span><span class="of">kg</span></div><p class="verdict">' + verdict + '</p></div>'
+      + '<div class="track" role="img" aria-label="从起点到目标的进度 ' + Math.round(p * 100) + '%"><div class="track-fill" style="width:' + (p * 100) + '%"></div><div class="track-mark" style="left:' + (p * 100) + '%"></div></div>'
+      + '<div class="track-ends"><span>起点 ' + kg(g.wStart) + '</span><span>目标 ' + kg(g.wTarget) + '</span></div>'
+      + routeHtml(g)
+      + '<p class="legend"><span><i class="met"></i>称了</span><span><i class="none"></i>没称</span></p>';
+  } else {
+    var need = g.type === 'sleep' ? g.nights : g.exTimes, unit = UNIT[g.type], done = 0, open = 0;
+    for (var i = 0; i < 7; i++){
+      var d = addDays(ws, i), m = met(g, state.days[d]);
+      if (m === true) done++;
+      if (d >= t && m == null) open++;
+    }
+    title = g.type === 'sleep' ? '<span class="n">' + g.bedTarget + '</span> 前入睡' : '每周运动 <span class="n">' + g.exTimes + '</span> 次';
+    sub = g.type === 'sleep' ? '每周做到 ' + g.nights + ' 晚' : '每次至少 ' + g.exMin + ' 分钟';
+    var left = need - done, v;
+    if (left <= 0) v = '本周目标已经达成。';
+    else if (left <= open) v = '还差 ' + left + ' ' + unit + '，本周还有 ' + open + ' 天可以记。';
+    else v = '这周最多还能到 ' + (done + open) + ' ' + unit + '，按能做到的来。';
+    body = '<div class="goal-row"><div class="count"><span class="num">' + done + '</span><span class="of">/ ' + need + ' ' + unit + '</span></div><p class="verdict">' + v + '</p></div>'
+      + routeHtml(g)
+      + '<p class="legend"><span><i class="met"></i>达成</span><span><i></i>记了但没达成</span><span><i class="none"></i>没有记录</span></p>';
+  }
+  var step = g.step ? '<p class="step"><b>今天的一小步</b>' + esc(g.step) + '</p>' : '';
+  view.innerHTML = head + '<h3 class="goal-title">' + title + '</h3><p class="goal-sub">' + sub + '</p>' + body + step;
+}
+
+/* ---------- goal editor ---------- */
+var STEP_HINT = { sleep: '例如：23:00 把手机放到卧室外充电', move: '例如：下班后先走 20 分钟再回家', weight: '例如：每天早上起床后称一次' };
+function setEdType(type){
+  state.edType = type;
+  $$('#goalEditor .seg button').forEach(function(b){ b.setAttribute('aria-pressed', String(b.dataset.type === type)); });
+  $$('#goalEditor [data-for]').forEach(function(el){ el.hidden = el.dataset.for !== type; });
+  $('#g-step').placeholder = STEP_HINT[type];
+  $('#app').dataset.goal = type;
+}
+function openEditor(){
+  var g = state.goal;
+  if (g){
+    $('#g-bed').value = g.bedTarget; $('#g-nights').value = g.nights;
+    $('#g-times').value = g.exTimes; $('#g-min').value = g.exMin;
+    $('#g-wstart').value = g.wStart != null ? kg(g.wStart) : '';
+    $('#g-wtarget').value = g.wTarget != null ? kg(g.wTarget) : '';
+    $('#g-step').value = g.step || '';
+  }
+  if (!$('#g-wstart').value){ var lw = latestWeight(); if (lw) $('#g-wstart').value = kg(lw.weight); }
+  $('#g-msg').textContent = '';
+  setEdType(g ? g.type : state.edType);
+  state.editing = true;
+  render();
+}
+function submitGoal(ev){
+  ev.preventDefault();
+  if (state.busy) return;
+  var type = state.edType, msg = $('#g-msg');
+  var prev = state.goal || {};
+  var g = {
+    type: type,
+    bedTarget: prev.bedTarget || '23:30', nights: prev.nights || 5,
+    exTimes: prev.exTimes || 3, exMin: prev.exMin || 20,
+    wStart: prev.wStart != null ? prev.wStart : null, wTarget: prev.wTarget != null ? prev.wTarget : null,
+    step: $('#g-step').value.trim().slice(0, 60)
+  };
+  if (type === 'sleep'){
+    if (toMin($('#g-bed').value) == null){ msg.textContent = '填一个入睡时间，比如 23:30。'; return; }
+    g.bedTarget = fmtClock(toMin($('#g-bed').value)); g.nights = clampInt($('#g-nights').value, 1, 7, 5);
+  } else if (type === 'move'){
+    g.exTimes = clampInt($('#g-times').value, 1, 7, 3); g.exMin = clampInt($('#g-min').value, 5, 300, 20);
+  } else {
+    var s = numIn($('#g-wstart').value, 20, 300), tg = numIn($('#g-wtarget').value, 20, 300);
+    if (s == null || tg == null){ msg.textContent = '起点和目标都要填，单位是 kg。'; return; }
+    g.wStart = Math.round(s * 10) / 10; g.wTarget = Math.round(tg * 10) / 10;
+  }
+  msg.textContent = '';
+  setBusy(true);
+  saveGoal(g).then(function(){
+    state.goal = cleanGoal(g); state.editing = false;
+    toast('主目标已保存');
+  }, function(e){ msg.textContent = '没保存上。' + why(e); }).then(function(){ setBusy(false); render(); });
+}
+
+/* ---------- entry form ---------- */
+function fillForm(date){
+  state.formDate = date;
+  var r = state.days[date] || {};
+  $('#f-date').value = date;
+  $('#f-date').max = today();
+  $('#f-bed').value = r.bed || '';
+  $('#f-wake').value = r.wake || '';
+  $('#f-exmin').value = r.exMin != null ? r.exMin : '';
+  $$('#entry input[name="extype"]').forEach(function(i){ i.checked = r.exType === i.value; });
+  $('#f-weight').value = r.weight != null ? kg(r.weight) : '';
+  $('#f-msg').textContent = '';
+  formDirty = false;
+  renderFormMeta();
+}
+function renderFormMeta(){
+  var d = state.formDate, isToday = d === today();
+  $('#f-dayname').textContent = validDate(d) ? dayCn(d) : '';
+  $('#l-bed').textContent = isToday ? '昨晚入睡' : '前一晚入睡';
+  $('#l-wake').textContent = isToday ? '今早起床' : '当天起床';
+  var s = sleepOf({ bed: $('#f-bed').value, wake: $('#f-wake').value });
+  $('#f-dur').innerHTML = s ? '睡了 <strong>' + fmtDur(s.dur) + '</strong>' : '';
+  $('#f-save').textContent = state.busy ? '正在保存…' : state.days[d] ? '更新这一天' : '保存这一天';
+  var gt = state.goal ? state.goal.type : null;
+  $$('#entry .grp').forEach(function(el){
+    var on = el.dataset.k === gt;
+    el.classList.toggle('is-goal', on);
+    $('.tag', el).hidden = !on;
+  });
+}
+function setBusy(b){
+  state.busy = b;
+  $('#f-save').disabled = b; $('#g-save').disabled = b;
+}
+function submitEntry(ev){
+  ev.preventDefault();
+  if (state.busy) return;
+  var msg = $('#f-msg'), date = $('#f-date').value;
+  if (!state.ready){ msg.textContent = '记录还在读取，稍等一下再保存。'; return; }
+  if (!validDate(date)){ msg.textContent = '先选一个日期。'; return; }
+  if (date > today()){ msg.textContent = '只能记今天和以前的日期。'; return; }
+  var rec = { date: date };
+  var bed = toMin($('#f-bed').value), wake = toMin($('#f-wake').value);
+  if (bed != null) rec.bed = fmtClock(bed);
+  if (wake != null) rec.wake = fmtClock(wake);
+  if (bed != null && wake != null && bed === wake){ msg.textContent = '入睡和起床时间一样，检查一下。'; return; }
+  var exRaw = $('#f-exmin').value.trim();
+  if (exRaw !== ''){
+    var ex = parseInt(exRaw, 10);
+    if (!isFinite(ex) || ex < 0 || ex > 600){ msg.textContent = '运动时长填 0 到 600 之间的分钟数。'; return; }
+    if (ex > 0){ rec.exMin = ex; var chk = $('#entry input[name="extype"]:checked'); if (chk) rec.exType = chk.value; }
+  }
+  var wRaw = $('#f-weight').value.trim();
+  if (wRaw !== ''){
+    var w = numIn(wRaw, 20, 300);
+    if (w == null){ msg.textContent = '体重填 20 到 300 之间的数字，单位 kg。'; return; }
+    rec.weight = Math.round(w * 10) / 10;
+  }
+  if (Object.keys(rec).length === 1){ msg.textContent = state.days[date] ? '三项都清空了。要去掉这一天，在下面的记录里点“删”。' : '至少填一项再保存。'; return; }
+  msg.textContent = '';
+  setBusy(true); renderFormMeta();
+  saveDay(rec).then(function(){
+    state.days[date] = rec; formDirty = false;
+    toast('已保存 ' + dayCn(date));
+  }, function(e){ msg.textContent = '没保存上。' + why(e); }).then(function(){ setBusy(false); render(); });
+}
+
+/* ---------- charts ---------- */
+function exampleDays(){
+  var bed = ['23:20','23:55','00:30','23:10','23:40','00:50','00:10','23:25','23:15','23:50','00:20','23:30','23:05','23:45'];
+  var wake = ['07:10','07:20','07:40','07:00','07:15','08:30','08:10','07:05','07:10','07:20','07:30','07:10','07:00','07:15'];
+  var ex = [0,30,0,25,0,45,0,0,30,0,20,0,40,0];
+  var ty = ['','跑步','','走路','','骑车','','','跑步','','走路','','力量',''];
+  var wt = [68.6,null,68.4,null,null,68.5,null,68.2,null,68.1,null,null,67.9,null];
+  var t = today(), m = {};
+  for (var i = 0; i < 14; i++){
+    var d = addDays(t, i - 14), r = { date: d, bed: bed[i], wake: wake[i] };
+    if (ex[i]){ r.exMin = ex[i]; r.exType = ty[i]; }
+    if (wt[i] != null) r.weight = wt[i];
+    m[d] = r;
+  }
+  return m;
+}
+function frame(el, H){
+  var W = Math.floor(el.clientWidth);
+  if (W < 120) return null;
+  var m = { l: 40, r: 10, t: 12, b: 22 };
+  return { W: W, H: H, m: m, pw: W - m.l - m.r, ph: H - m.t - m.b };
+}
+function xLabels(dates, f, step){
+  var k = Math.max(1, Math.ceil(46 / step)), out = '', last = dates.length - 1, t = today();
+  for (var i = last; i >= 0; i -= k){
+    out += '<text class="tick" x="' + (f.m.l + step * (i + .5)) + '" y="' + (f.H - 5) + '" text-anchor="middle">' + (dates[i] === t ? '今天' : md(dates[i])) + '</text>';
+  }
+  return out;
+}
+function svgOpen(f, label){ return '<svg width="' + f.W + '" height="' + f.H + '" viewBox="0 0 ' + f.W + ' ' + f.H + '" role="img" aria-label="' + esc(label) + '">'; }
+function band(f){ return '<rect class="band" x="0" y="' + f.m.t + '" width="0" height="' + f.ph + '"></rect>'; }
+function noneText(f, text){ return '<text class="none-text" x="' + (f.m.l + f.pw / 2) + '" y="' + (f.m.t + f.ph / 2 + 4) + '" text-anchor="middle">' + text + '</text>'; }
+function tipHead(d){ return '<b>' + esc(dayCn(d)) + '</b><br>'; }
+function put(id, f, svg, tips, step){
+  var el = $('#' + id);
+  $('.svgwrap', el).innerHTML = svg;
+  $('.tip', el).hidden = true;
+  el._m = { n: tips.length, x0: f.m.l, step: step, top: f.m.t, tips: tips };
+}
+function topRound(x, y, w, h, r){
+  r = Math.min(r, w / 2, h);
+  return 'M' + x + ',' + (y + h) + 'V' + (y + r) + 'Q' + x + ',' + y + ' ' + (x + r) + ',' + y + 'H' + (x + w - r) + 'Q' + (x + w) + ',' + y + ' ' + (x + w) + ',' + (y + r) + 'V' + (y + h) + 'Z';
+}
+
+function drawSleep(dates, src, goal){
+  var f = frame($('#c-sleep .svgwrap'), 196); if (!f) return;
+  var step = f.pw / dates.length, bw = Math.min(14, Math.max(4, step * .56));
+  var lo = 1260, hi = 1980, any = false, durs = [], beds = [];
+  var items = dates.map(function(d){
+    var r = src[d]; if (!r) return null;
+    var s = sleepOf(r);
+    if (!s){ var b = toMin(r.bed), w = toMin(r.wake); if (b != null) s = { bed: norm(b) }; else if (w != null) s = { wake: w + 1440 }; else return null; }
+    else { durs.push(s.dur); }
+    if (s.bed != null){ beds.push(s.bed); lo = Math.min(lo, Math.floor(s.bed / 60) * 60); hi = Math.max(hi, Math.ceil(s.bed / 60) * 60); }
+    if (s.wake != null){ lo = Math.min(lo, Math.floor(s.wake / 60) * 60); hi = Math.max(hi, Math.ceil(s.wake / 60) * 60); }
+    any = true; return s;
+  });
+  var target = goal && goal.type === 'sleep' ? norm(toMin(goal.bedTarget)) : null;
+  if (target != null){ lo = Math.min(lo, Math.floor(target / 60) * 60 - 60); hi = Math.max(hi, target); }
+  var y = function(v){ return f.m.t + (v - lo) / (hi - lo) * f.ph; };
+  var tk = hi - lo > 840 ? 180 : 120, g = '';
+  for (var v = Math.ceil(lo / tk) * tk; v <= hi; v += tk){
+    g += '<line class="grid" x1="' + f.m.l + '" x2="' + (f.W - f.m.r) + '" y1="' + y(v) + '" y2="' + y(v) + '"></line><text class="tick" x="' + (f.m.l - 7) + '" y="' + (y(v) + 4) + '" text-anchor="end">' + fmtClock(v) + '</text>';
+  }
+  var marks = '', tips = [];
+  items.forEach(function(s, i){
+    var cx = f.m.l + step * (i + .5), d = dates[i];
+    if (!s){ tips.push(tipHead(d) + '没有睡眠记录'); return; }
+    if (s.bed != null && s.wake != null){
+      marks += '<rect class="m-sleep" x="' + (cx - bw / 2) + '" y="' + y(s.bed) + '" width="' + bw + '" height="' + Math.max(2, y(s.wake) - y(s.bed)) + '" rx="' + Math.min(4, bw / 2) + '"></rect>';
+      tips.push(tipHead(d) + '入睡 ' + fmtClock(s.bed) + ' · 起床 ' + fmtClock(s.wake) + '<br>睡了 ' + fmtDur(s.dur));
+    } else {
+      var val = s.bed != null ? s.bed : s.wake;
+      marks += '<circle class="m-sleep" cx="' + cx + '" cy="' + y(val) + '" r="4"></circle>';
+      tips.push(tipHead(d) + (s.bed != null ? '入睡 ' : '起床 ') + fmtClock(val));
+    }
+  });
+  var tl = '';
+  if (target != null){
+    tl = '<line class="target" x1="' + f.m.l + '" x2="' + (f.W - f.m.r) + '" y1="' + y(target) + '" y2="' + y(target) + '"></line><text class="tlabel" x="' + (f.W - f.m.r) + '" y="' + (y(target) - 5) + '" text-anchor="end">目标 ' + fmtClock(target) + '</text>';
+  }
+  var svg = svgOpen(f, '每天从入睡到起床的时间段') + band(f) + g + (any ? marks + tl : tl + noneText(f, state.ready ? '这段时间还没有睡眠记录' : '正在读取…')) + xLabels(dates, f, step) + '</svg>';
+  put('c-sleep', f, svg, tips, step);
+  var avg = function(a){ return a.reduce(function(x, y){ return x + y; }, 0) / a.length; };
+  $('#s-sleep').textContent = durs.length ? '平均 ' + fmtDur(avg(durs)) + ' · 平均 ' + fmtClock(avg(beds)) + ' 入睡' : beds.length ? '平均 ' + fmtClock(avg(beds)) + ' 入睡' : '';
+}
+
+function drawMove(dates, src, goal){
+  var f = frame($('#c-move .svgwrap'), 150); if (!f) return;
+  var step = f.pw / dates.length, bw = Math.min(14, Math.max(4, step * .56));
+  var vals = dates.map(function(d){ var r = src[d]; return r && r.exMin ? r.exMin : 0; });
+  var thr = goal && goal.type === 'move' ? goal.exMin : null;
+  var top = Math.max(30, thr || 0, Math.max.apply(null, vals));
+  var unit = top <= 180 ? 30 : 60, max = Math.ceil(top / unit) * unit;
+  var y = function(v){ return f.m.t + f.ph - v / max * f.ph; };
+  var g = '';
+  [0, max / 2, max].forEach(function(v){
+    g += '<line class="' + (v === 0 ? 'base' : 'grid') + '" x1="' + f.m.l + '" x2="' + (f.W - f.m.r) + '" y1="' + y(v) + '" y2="' + y(v) + '"></line><text class="tick" x="' + (f.m.l - 7) + '" y="' + (y(v) + 4) + '" text-anchor="end">' + v + '</text>';
+  });
+  var marks = '', tips = [], count = 0, sum = 0;
+  vals.forEach(function(v, i){
+    var cx = f.m.l + step * (i + .5), d = dates[i], r = src[d];
+    if (!v){ tips.push(tipHead(d) + '没有运动记录'); return; }
+    count++; sum += v;
+    marks += '<path class="m-move" d="' + topRound(cx - bw / 2, y(v), bw, y(0) - y(v), 4) + '"></path>';
+    tips.push(tipHead(d) + (r.exType ? esc(r.exType) + ' ' : '') + v + ' 分钟');
+  });
+  var tl = '';
+  if (thr != null){
+    tl = '<line class="target" x1="' + f.m.l + '" x2="' + (f.W - f.m.r) + '" y1="' + y(thr) + '" y2="' + y(thr) + '"></line><text class="tlabel" x="' + (f.W - f.m.r) + '" y="' + (y(thr) - 5) + '" text-anchor="end">每次至少 ' + thr + ' 分钟</text>';
+  }
+  var svg = svgOpen(f, '每天的运动分钟数') + band(f) + g + marks + tl + (count ? '' : noneText(f, state.ready ? '这段时间还没有运动记录' : '正在读取…')) + xLabels(dates, f, step) + '</svg>';
+  put('c-move', f, svg, tips, step);
+  $('#s-move').textContent = count ? count + ' 次 · 共 ' + sum + ' 分钟' : '';
+}
+
+function drawWeight(dates, src, goal){
+  var f = frame($('#c-weight .svgwrap'), 170); if (!f) return;
+  var step = f.pw / dates.length;
+  var pts = [], tips = [];
+  dates.forEach(function(d, i){
+    var r = src[d];
+    if (r && r.weight != null){ pts.push({ i: i, v: r.weight }); tips.push(tipHead(d) + kg(r.weight) + ' kg'); }
+    else tips.push(tipHead(d) + '没有体重记录');
+  });
+  var target = goal && goal.type === 'weight' && goal.wTarget != null ? goal.wTarget : null;
+  var all = pts.map(function(p){ return p.v; });
+  if (target != null) all.push(target);
+  var lo, hi;
+  if (all.length){ lo = Math.floor(Math.min.apply(null, all) - .5); hi = Math.ceil(Math.max.apply(null, all) + .5); }
+  else { lo = 60; hi = 64; }
+  if (hi - lo < 2) hi = lo + 2;
+  var tk = Math.max(1, Math.ceil((hi - lo) / 4));
+  hi = lo + Math.ceil((hi - lo) / tk) * tk;
+  var y = function(v){ return f.m.t + f.ph - (v - lo) / (hi - lo) * f.ph; };
+  var x = function(i){ return f.m.l + step * (i + .5); };
+  var g = '';
+  for (var v = lo; v <= hi; v += tk){
+    g += '<line class="grid" x1="' + f.m.l + '" x2="' + (f.W - f.m.r) + '" y1="' + y(v) + '" y2="' + y(v) + '"></line><text class="tick" x="' + (f.m.l - 7) + '" y="' + (y(v) + 4) + '" text-anchor="end">' + v + '</text>';
+  }
+  var marks = '';
+  if (pts.length > 1) marks += '<path class="m-wline" d="' + pts.map(function(p, k){ return (k ? 'L' : 'M') + x(p.i) + ',' + y(p.v); }).join('') + '"></path>';
+  pts.forEach(function(p, k){ marks += '<circle class="m-wdot" cx="' + x(p.i) + '" cy="' + y(p.v) + '" r="' + (k === pts.length - 1 ? 5.5 : 4.5) + '"></circle>'; });
+  if (pts.length){
+    var lp = pts[pts.length - 1], lx = x(lp.i), nearRight = lx > f.W - f.m.r - 22;
+    var ly = y(lp.v) - 11 < f.m.t + 6 ? y(lp.v) + 21 : y(lp.v) - 11;
+    marks += '<text class="vlabel" x="' + (nearRight ? f.W - f.m.r : lx) + '" y="' + ly + '" text-anchor="' + (nearRight ? 'end' : 'middle') + '">' + kg(lp.v) + '</text>';
+  }
+  var tl = '';
+  if (target != null){
+    tl = '<line class="target" x1="' + f.m.l + '" x2="' + (f.W - f.m.r) + '" y1="' + y(target) + '" y2="' + y(target) + '"></line><text class="tlabel" x="' + (f.m.l + 4) + '" y="' + (y(target) - 5) + '" text-anchor="start">目标 ' + kg(target) + '</text>';
+  }
+  var svg = svgOpen(f, '体重变化') + band(f) + g + tl + marks + (pts.length ? '' : noneText(f, state.ready ? '这段时间还没有体重记录' : '正在读取…')) + xLabels(dates, f, step) + '</svg>';
+  put('c-weight', f, svg, tips, step);
+  var stat = '';
+  if (pts.length){
+    stat = '最新 ' + kg(pts[pts.length - 1].v) + ' kg';
+    if (pts.length > 1){ var dv = Math.round((pts[pts.length - 1].v - pts[0].v) * 10) / 10; stat += ' · ' + dates.length + ' 天内 ' + (dv > 0 ? '+' : dv < 0 ? '−' : '±') + Math.abs(dv).toFixed(1); }
+  }
+  $('#s-weight').textContent = stat;
+}
+
+function renderCharts(){
+  var real = Object.keys(state.days).length > 0;
+  var demo = state.ready && !real;
+  $('#demoNote').hidden = !demo;
+  var src = demo ? exampleDays() : state.days;
+  var t = today(), dates = [];
+  for (var i = state.range - 1; i >= 0; i--) dates.push(addDays(t, -i));
+  var goal = state.editing || !state.goal ? null : state.goal;
+  drawSleep(dates, src, goal); drawMove(dates, src, goal); drawWeight(dates, src, goal);
+  var gt = state.goal ? state.goal.type : null;
+  $$('#charts .chart').forEach(function(el){ el.classList.toggle('is-goal', el.dataset.k === gt); });
+  $$('[data-range]').forEach(function(b){ b.setAttribute('aria-pressed', String(Number(b.dataset.range) === state.range)); });
+}
+function wireChart(el){
+  var hide = function(){ var b = $('.band', el); if (b) b.style.display = 'none'; $('.tip', el).hidden = true; };
+  var show = function(ev){
+    var m = el._m, svg = $('svg', el); if (!m || !svg) return;
+    var r = svg.getBoundingClientRect(), i = Math.floor((ev.clientX - r.left - m.x0) / m.step);
+    if (i < 0 || i >= m.n){ hide(); return; }
+    var b = $('.band', el); b.setAttribute('x', m.x0 + i * m.step); b.setAttribute('width', m.step); b.style.display = 'block';
+    var tip = $('.tip', el); tip.innerHTML = m.tips[i]; tip.hidden = false;
+    var half = tip.offsetWidth / 2, cx = m.x0 + (i + .5) * m.step;
+    tip.style.left = Math.min(Math.max(cx, half), r.width - half) + 'px';
+    tip.style.top = (m.top + 2) + 'px';
+  };
+  el.addEventListener('pointermove', show);
+  el.addEventListener('pointerdown', show);
+  el.addEventListener('pointerleave', hide);
+}
+
+/* ---------- records table ---------- */
+function renderTable(){
+  var box = $('#recBody'), rows = Object.keys(state.days).sort().reverse();
+  if (!rows.length){
+    box.innerHTML = '<p class="empty">' + (state.ready ? '还没有记录。在“记一笔”里保存今天的数据，这里会出现第一行。' : '正在读取…') + '</p>';
+    $('#moreRows').hidden = true; return;
+  }
+  var shown = state.showAll ? rows : rows.slice(0, 14);
+  var h = '<div class="tablewrap"><table><thead><tr><th scope="col">日期</th><th scope="col">入睡</th><th scope="col">起床</th><th scope="col">睡眠</th><th scope="col">运动</th><th scope="col">体重</th><th scope="col"><span class="sr">操作</span></th></tr></thead><tbody>';
+  shown.forEach(function(d){
+    var r = state.days[d], s = sleepOf(r);
+    var acts = state.confirmDel === d
+      ? '<button class="link danger" type="button" data-act="del" data-d="' + d + '">确认删除</button><button class="link" type="button" data-act="keep">不删</button>'
+      : '<button class="link" type="button" data-act="edit" data-d="' + d + '">改</button><button class="link" type="button" data-act="ask" data-d="' + d + '">删</button>';
+    h += '<tr><td>' + esc(dayCn(d)) + '</td><td class="num">' + (r.bed || '–') + '</td><td class="num">' + (r.wake || '–') + '</td><td class="num">' + (s ? fmtDurShort(s.dur) : '–') + '</td><td class="num">' + (r.exMin ? r.exMin + ' 分' + (r.exType ? ' ' + esc(r.exType) : '') : '–') + '</td><td class="num">' + (r.weight != null ? kg(r.weight) : '–') + '</td><td class="acts">' + acts + '</td></tr>';
+  });
+  box.innerHTML = h + '</tbody></table></div>';
+  var more = $('#moreRows');
+  more.hidden = state.showAll || rows.length <= 14;
+  more.textContent = '显示更早的 ' + (rows.length - 14) + ' 天';
+}
+
+/* ---------- toast ---------- */
+var toastTimer = null;
+function toast(text){
+  var el = $('#toast'); el.textContent = text; el.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(function(){ el.hidden = true; }, 2600);
+}
+
+/* ---------- backup ---------- */
+var APP_VERSION = '1.0.0';
+var BK_KEY = 'health-route.backupAt';
+var pendingImport = null;
+function renderBackup(){
+  var at = null; try { at = window.localStorage.getItem(BK_KEY); } catch (e) {}
+  var n = Object.keys(state.days).length, el = $('#bk-state');
+  $('#bk-export').disabled = !n && !state.goal;
+  if (!n) el.textContent = '还没有记录，暂时不用备份。';
+  else if (!validDate(at)) el.textContent = '有 ' + n + ' 天记录，还没有备份过。';
+  else {
+    var gap = Math.round((parseYmd(today()) - parseYmd(at)) / 86400000);
+    el.textContent = '有 ' + n + ' 天记录。上次备份是' + (gap === 0 ? '今天' : mdCn(at)) + (gap >= 14 ? '，已经过去 ' + gap + ' 天，建议再导出一次。' : '。');
+  }
+}
+function exportBackup(){
+  var text = JSON.stringify({ app: 'health-route', format: 1, exportedAt: new Date().toISOString(), goal: state.goal, days: state.days }, null, 1);
+  var name = 'health-route-backup-' + today() + '.json';
+  var mark = function(){ try { window.localStorage.setItem(BK_KEY, today()); } catch (e) {} renderBackup(); };
+  var viaLink = function(){
+    var url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+    var a = document.createElement('a'); a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 5000);
+    mark(); toast('备份文件已生成：' + name);
+  };
+  try {
+    var file = new File([text], name, { type: 'application/json' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })){
+      navigator.share({ files: [file], title: '健康航线备份' }).then(function(){ mark(); toast('备份已导出'); }, function(e){ if (!e || e.name !== 'AbortError') viaLink(); });
+      return;
+    }
+  } catch (e) {}
+  viaLink();
+}
+function readBackup(file){
+  var fr = new FileReader();
+  fr.onerror = function(){ toast('这个文件读不出来。'); };
+  fr.onload = function(){
+    var o = null; try { o = JSON.parse(String(fr.result)); } catch (e) {}
+    if (!o || typeof o !== 'object' || !o.days || typeof o.days !== 'object'){ toast('这不是健康航线的备份文件。'); return; }
+    var days = {}, n = 0;
+    Object.keys(o.days).forEach(function(k){ var r = cleanRec(o.days[k]); if (r && Object.keys(r).length > 1){ days[r.date] = r; n++; } });
+    var goal = cleanGoal(o.goal);
+    if (!n && !goal){ toast('备份里没有可用的记录。'); return; }
+    pendingImport = { days: days, goal: goal };
+    $('#bk-confirm-text').textContent = '备份里有 ' + n + ' 天记录' + (goal ? '和一个主目标' : '') + '。导入后会和现有记录合并，同一天以备份为准' + (goal && state.goal ? '，主目标保持现在的不变。' : '。');
+    $('#bk-confirm').hidden = false;
+  };
+  fr.readAsText(file);
+}
+function applyImport(){
+  if (!pendingImport) return;
+  var p = pendingImport; pendingImport = null; $('#bk-confirm').hidden = true;
+  Object.keys(p.days).forEach(function(d){ state.days[d] = p.days[d]; });
+  if (p.goal && !state.goal) state.goal = p.goal;
+  if (!writeLocal()){ toast('没导入成功。' + why()); return; }
+  if (!formDirty) fillForm(state.formDate);
+  render(); toast('已导入 ' + Object.keys(p.days).length + ' 天记录');
+}
+
+function render(){ renderStatus(); renderHero(); renderFormMeta(); renderCharts(); renderTable(); renderBackup(); }
+
+/* ---------- events ---------- */
+$('#goalEditor').addEventListener('submit', submitGoal);
+$$('#goalEditor .seg button').forEach(function(b){ b.addEventListener('click', function(){ setEdType(b.dataset.type); }); });
+$('#g-cancel').addEventListener('click', function(){ state.editing = false; render(); });
+$('#heroView').addEventListener('click', function(ev){ if (ev.target.id === 'editGoal') openEditor(); });
+
+$('#entry').addEventListener('submit', submitEntry);
+$('#entry').addEventListener('input', function(ev){ if (ev.target.id !== 'f-date'){ formDirty = true; renderFormMeta(); } });
+$('#f-date').addEventListener('change', function(){ var v = $('#f-date').value; if (validDate(v)) fillForm(v); });
+$('#f-yest').addEventListener('click', function(){ fillForm(addDays(today(), -1)); });
+$('#f-today').addEventListener('click', function(){ fillForm(today()); });
+
+$$('[data-range]').forEach(function(b){ b.addEventListener('click', function(){ state.range = Number(b.dataset.range); renderCharts(); }); });
+['c-sleep', 'c-move', 'c-weight'].forEach(function(id){ wireChart($('#' + id)); });
+
+$('#recBody').addEventListener('click', function(ev){
+  var b = ev.target.closest('button[data-act]'); if (!b) return;
+  var act = b.dataset.act, d = b.dataset.d;
+  if (act === 'edit'){ fillForm(d); $('#entryH').scrollIntoView({ block: 'start', behavior: 'auto' }); $('#f-bed').focus({ preventScroll: true }); }
+  else if (act === 'ask'){ state.confirmDel = d; renderTable(); }
+  else if (act === 'keep'){ state.confirmDel = null; renderTable(); }
+  else if (act === 'del' && !state.busy){
+    setBusy(true);
+    removeDay(d).then(function(){
+      delete state.days[d]; state.confirmDel = null;
+      if (state.formDate === d) fillForm(d);
+      toast('已删除 ' + dayCn(d));
+    }, function(e){ toast('没删掉。' + why(e)); }).then(function(){ setBusy(false); render(); });
+  }
+});
+$('#moreRows').addEventListener('click', function(){ state.showAll = true; renderTable(); });
+
+var rz = null;
+if (window.ResizeObserver){
+  new ResizeObserver(function(){ clearTimeout(rz); rz = setTimeout(renderCharts, 80); }).observe($('#charts'));
+} else {
+  window.addEventListener('resize', function(){ clearTimeout(rz); rz = setTimeout(renderCharts, 120); });
+}
+
+$('#bk-export').addEventListener('click', exportBackup);
+$('#bk-import').addEventListener('click', function(){ $('#bk-file').click(); });
+$('#bk-file').addEventListener('change', function(){ var f = this.files && this.files[0]; this.value = ''; if (f) readBackup(f); });
+$('#bk-yes').addEventListener('click', applyImport);
+$('#bk-no').addEventListener('click', function(){ pendingImport = null; $('#bk-confirm').hidden = true; });
+
+/* an installed app can stay open across midnight: catch up when it comes back to the front */
+var lastToday = today();
+document.addEventListener('visibilitychange', function(){
+  if (document.hidden || today() === lastToday) return;
+  lastToday = today();
+  if (!formDirty) fillForm(lastToday);
+  render();
+});
+
+if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0){
+  window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
+}
+
+/* ---------- boot ---------- */
+$('#ver').textContent = APP_VERSION;
+$('#f-date').value = state.formDate;
+$('#f-date').max = today();
+render();
+initStore();
+})();
+</script>
+
+</body>
+</html>
