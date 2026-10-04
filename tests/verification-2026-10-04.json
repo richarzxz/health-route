@@ -1,0 +1,239 @@
+{
+  "method": "Node VM with simulated DOM/storage/network; no real-browser/iPhone validation",
+  "total": 58,
+  "passed": 58,
+  "outcomes": [
+    {
+      "name": "all six JavaScript sources parse",
+      "pass": true
+    },
+    {
+      "name": "index.html boot with simulated DOM",
+      "pass": true
+    },
+    {
+      "name": "study/index.html boot with simulated DOM",
+      "pass": true
+    },
+    {
+      "name": "money/index.html boot with simulated DOM",
+      "pass": true
+    },
+    {
+      "name": "health explicit zero survives cleaning and goal comparison",
+      "pass": true
+    },
+    {
+      "name": "health accepts and saves zero-only entry",
+      "pass": true
+    },
+    {
+      "name": "health zero chart is recorded, without counting exercise",
+      "pass": true
+    },
+    {
+      "name": "health failed save/delete rolls back",
+      "pass": true
+    },
+    {
+      "name": "health old format 1 backup imports and exports zero",
+      "pass": true
+    },
+    {
+      "name": "money failed save retry creates only one entry",
+      "pass": true
+    },
+    {
+      "name": "money exact cents and fixed reserve remain correct",
+      "pass": true
+    },
+    {
+      "name": "money cross-month form shows historical categories",
+      "pass": true
+    },
+    {
+      "name": "money month rollover copies plan without sharing category objects",
+      "pass": true
+    },
+    {
+      "name": "money old plan import preserves categories referenced by current entries",
+      "pass": true
+    },
+    {
+      "name": "money import failed main write leaves pending data retryable",
+      "pass": true
+    },
+    {
+      "name": "money invalid schema, currency and amount units rejected without mutation",
+      "pass": true
+    },
+    {
+      "name": "money rejects duplicate IDs and missing category links",
+      "pass": true
+    },
+    {
+      "name": "money same-ID conflicting entries rejected rather than silently lost",
+      "pass": true
+    },
+    {
+      "name": "study failed finish retry creates only one practice and log",
+      "pass": true
+    },
+    {
+      "name": "study completion and clearing draft are one main write, even legacy removal fails",
+      "pass": true
+    },
+    {
+      "name": "study migrates legacy draft and retains fuzzy rating and typed text",
+      "pass": true
+    },
+    {
+      "name": "study draft migration keeps uncompleted text longer than final note limit",
+      "pass": true
+    },
+    {
+      "name": "study draft backup restores into empty app",
+      "pass": true
+    },
+    {
+      "name": "study old no-draft backup remains importable",
+      "pass": true
+    },
+    {
+      "name": "study two draft conflict is explicit and preserves current draft",
+      "pass": true
+    },
+    {
+      "name": "study current draft unit survives old notes import",
+      "pass": true
+    },
+    {
+      "name": "study failed new unit creation keeps current draft and active unit",
+      "pass": true
+    },
+    {
+      "name": "study same-day recall does not pass next-day criterion",
+      "pass": true
+    },
+    {
+      "name": "imported unsafe/reserved identifiers are rejected",
+      "pass": true
+    },
+    {
+      "name": "HTML identifiers escaped even for previously stored unsafe values",
+      "pass": true
+    },
+    {
+      "name": "index.html unreadable original is preserved and writes blocked",
+      "pass": true
+    },
+    {
+      "name": "study/index.html unreadable original is preserved and writes blocked",
+      "pass": true
+    },
+    {
+      "name": "money/index.html unreadable original is preserved and writes blocked",
+      "pass": true
+    },
+    {
+      "name": "index.html previous snapshot failure prevents import mutation",
+      "pass": true
+    },
+    {
+      "name": "study/index.html previous snapshot failure prevents import mutation",
+      "pass": true
+    },
+    {
+      "name": "money/index.html previous snapshot failure prevents import mutation",
+      "pass": true
+    },
+    {
+      "name": "sw.js 503 navigation serves cache",
+      "pass": true
+    },
+    {
+      "name": "sw.js offline navigation serves cache",
+      "pass": true
+    },
+    {
+      "name": "sw.js successful response caches both document entry URLs",
+      "pass": true
+    },
+    {
+      "name": "sw.js cache write failure does not hide network response",
+      "pass": true
+    },
+    {
+      "name": "sw.js slow network serves cache and later updates it",
+      "pass": true
+    },
+    {
+      "name": "sw.js ignores other app subfolders",
+      "pass": true
+    },
+    {
+      "name": "sw.js missing assets are not replaced with app HTML",
+      "pass": true
+    },
+    {
+      "name": "study/sw.js 503 navigation serves cache",
+      "pass": true
+    },
+    {
+      "name": "study/sw.js offline navigation serves cache",
+      "pass": true
+    },
+    {
+      "name": "study/sw.js successful response caches both document entry URLs",
+      "pass": true
+    },
+    {
+      "name": "study/sw.js cache write failure does not hide network response",
+      "pass": true
+    },
+    {
+      "name": "study/sw.js slow network serves cache and later updates it",
+      "pass": true
+    },
+    {
+      "name": "study/sw.js ignores other app subfolders",
+      "pass": true
+    },
+    {
+      "name": "study/sw.js missing assets are not replaced with app HTML",
+      "pass": true
+    },
+    {
+      "name": "money/sw.js 503 navigation serves cache",
+      "pass": true
+    },
+    {
+      "name": "money/sw.js offline navigation serves cache",
+      "pass": true
+    },
+    {
+      "name": "money/sw.js successful response caches both document entry URLs",
+      "pass": true
+    },
+    {
+      "name": "money/sw.js cache write failure does not hide network response",
+      "pass": true
+    },
+    {
+      "name": "money/sw.js slow network serves cache and later updates it",
+      "pass": true
+    },
+    {
+      "name": "money/sw.js ignores other app subfolders",
+      "pass": true
+    },
+    {
+      "name": "money/sw.js missing assets are not replaced with app HTML",
+      "pass": true
+    },
+    {
+      "name": "offline and no cache rejects navigation",
+      "pass": true
+    }
+  ]
+}

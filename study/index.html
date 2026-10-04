@@ -428,6 +428,7 @@ td.wrap{white-space:normal;min-width:150px}
         <div class="actions">
           <button class="btn ghost" type="button" id="bk-export">导出备份</button>
           <button class="btn ghost" type="button" id="bk-import">导入备份</button>
+          <button class="btn ghost" type="button" id="bk-previous">导出导入前副本</button>
           <input class="sr" type="file" id="bk-file" accept="application/json,.json,text/plain" tabindex="-1" aria-hidden="true">
         </div>
         <div class="confirm" id="bk-confirm" hidden>
@@ -475,7 +476,7 @@ function uid(){ return 'x' + Date.now().toString(36) + Math.floor(Math.random() 
 function mmss(ms){ var s = Math.max(0, Math.floor(ms / 1000)); return pad(Math.floor(s / 60)) + ':' + pad(s % 60); }
 
 /* ---------- state ---------- */
-var APP_VERSION = '1.0.1';
+var APP_VERSION = '1.0.2';
 var LS_KEY = 'study-route.v1', BK_KEY = 'study-route.backupAt', DR_KEY = 'study-route.draft';
 var IV = [1, 3, 7, 14, 30, 60];          /* review intervals in days, by box */
 var REPS = 3;                             /* practice rounds that complete a skill */
@@ -483,10 +484,56 @@ var KIND = { concept: '学概念', skill: '练技能', review: '复习' };
 var BOOK = { want: '想读', reading: '在读', done: '读完' };
 var FB = ['对照范例', '请人看', '让 AI 挑错', '录下来回看', '只凭自己感觉'];
 
-var state = { units: [], log: [], books: [], goals: [] };
+var state = { units: [], log: [], books: [], goals: [], draft: null };
+var readFailure = false, unreadableRaw = null;
+var committed = JSON.stringify(state);
 var ui = { ready: false, range: 14, form: null, wizOpen: false, review: null, confirmDel: null, confirmItem: null, showAllLog: false, confirmNew: false };
 var draft = null;
 var pendingImport = null;
+
+function isObj(v){ return !!v && typeof v === 'object' && !Array.isArray(v); }
+function validId(v){ return typeof v === 'string' && /^[A-Za-z0-9_-]{1,40}$/.test(v) && ['__proto__','constructor','prototype'].indexOf(v) < 0; }
+function validRows(rows, clean){
+  if (!Array.isArray(rows)) return false;
+  var seen = Object.create(null);
+  return rows.every(function(v){
+    if (!isObj(v) || !validId(v.id) || seen[v.id] || !clean(v)) return false;
+    seen[v.id] = true; return true;
+  });
+}
+function beforeImport(){
+  if (readFailure){ toast('本机数据读取失败，先导出原始数据并联系维护；当前数据未覆盖。'); return false; }
+  try {
+    window.localStorage.setItem(LS_KEY + '.beforeImport', JSON.stringify(backupData()));
+    return true;
+  } catch (e){ toast('无法保存导入前的副本，暂未导入。请先导出备份并检查存储空间。'); return false; }
+}
+function exportBeforeImport(){
+  var raw = null;
+  try { raw = window.localStorage.getItem(LS_KEY + '.beforeImport'); } catch (e) {}
+  if (!raw){ toast('还没有导入前的副本。'); return; }
+  exportBackup(raw);
+}
+
+function cleanDraft(d, units){
+  if (!isObj(d) || !validId(d.unitId) || !units.some(function(u){ return u.id === d.unitId; }) || ['concept','skill'].indexOf(d.kind) < 0 || !isObj(d.f)) return null;
+  var maxStep = d.kind === 'concept' ? 4 : 3;
+  if (!Number.isInteger(d.step) || d.step < 0 || d.step > maxStep) return null;
+  var f = {};
+  ['recall','q','source','what','why','example','notThis','gap','goal','did','miss','fb','next','min'].forEach(function(k){
+    if (typeof d.f[k] === 'string') f[k] = d.f[k];
+    else if (k === 'min' && typeof d.f[k] === 'number') f[k] = String(d.f[k]);
+  });
+  return { unitId: d.unitId, kind: d.kind, step: d.step, f: f, elapsed: clampInt(d.elapsed, 0, 86400000, 0), stepMs: clampInt(d.stepMs, 0, 86400000, 0), beat: Date.now(), first: !!d.first, revealed: !!d.revealed, grade: ['ok','fuzzy','no'].indexOf(d.grade) >= 0 ? d.grade : null };
+}
+function backupData(){ return { app: 'study-route', format: 1, exportedAt: new Date().toISOString(), units: state.units, log: state.log, books: state.books, goals: state.goals, draft: draft }; }
+function validBackup(o){
+  if (!isObj(o) || o.app !== 'study-route' || o.format !== 1) return false;
+  if (!validRows(o.units, cleanUnit) || !validRows(o.log, cleanLog) || !validRows(o.books, cleanBook) || !validRows(o.goals, cleanGoal)) return false;
+  if (!o.units.every(function(u){ return isObj(u.concept) && isObj(u.skill) && (!u.skill.reps || Array.isArray(u.skill.reps) && u.skill.reps.length <= 50 && u.skill.reps.every(function(r){ return isObj(r) && validDate(r.date); })); })) return false;
+  return o.draft == null || !!cleanDraft(o.draft, o.units);
+}
+
 
 function cleanConcept(c){
   c = c || {};
@@ -518,27 +565,49 @@ function cleanUnit(u){
   return { id: S(u.id, 40) || uid(), start: u.start, closed: !!u.closed, concept: c, skill: k };
 }
 function cleanLog(l){
-  if (!l || !validDate(l.date) || !KIND[l.kind]) return null;
+  if (!l || !validDate(l.date) || !Object.prototype.hasOwnProperty.call(KIND, l.kind)) return null;
   return { id: S(l.id, 40) || uid(), date: l.date, kind: l.kind, title: S(l.title, 80), min: clampInt(l.min, 0, 600, 0) };
 }
-function cleanBook(b){ if (!b || !S(b.title, 80)) return null; return { id: S(b.id, 40) || uid(), title: S(b.title, 80), status: BOOK[b.status] ? b.status : 'want' }; }
+function cleanBook(b){ if (!b || !S(b.title, 80)) return null; return { id: S(b.id, 40) || uid(), title: S(b.title, 80), status: Object.prototype.hasOwnProperty.call(BOOK, b.status) ? b.status : 'want' }; }
 function cleanGoal(g){ if (!g || !S(g.text, 120)) return null; return { id: S(g.id, 40) || uid(), text: S(g.text, 120), done: !!g.done }; }
 function cleanState(o){
   o = o || {};
   var arr = function(a, f){ return Array.isArray(a) ? a.map(f).filter(Boolean) : []; };
-  return { units: arr(o.units, cleanUnit), log: arr(o.log, cleanLog), books: arr(o.books, cleanBook), goals: arr(o.goals, cleanGoal) };
+  var units = arr(o.units, cleanUnit);
+  return { units: units, log: arr(o.log, cleanLog), books: arr(o.books, cleanBook), goals: arr(o.goals, cleanGoal), draft: cleanDraft(o.draft, units) };
 }
 
 /* ---------- storage: this device only ---------- */
 function load(){
-  try { var raw = window.localStorage.getItem(LS_KEY); if (raw) state = cleanState(JSON.parse(raw)); } catch (e) {}
-  try { var d = window.localStorage.getItem(DR_KEY); if (d){ d = JSON.parse(d); if (d && d.unitId && (d.kind === 'concept' || d.kind === 'skill') && unitById(d.unitId)){ d.f = d.f || {}; d.beat = Date.now(); draft = d; } } } catch (e) {}
+  try {
+    var raw = window.localStorage.getItem(LS_KEY); unreadableRaw = raw;
+    var o = raw ? JSON.parse(raw) : {};
+    if (raw && (!isObj(o) || !Array.isArray(o.units) || !Array.isArray(o.log) || !Array.isArray(o.books) || !Array.isArray(o.goals))) throw new Error('invalid local data');
+    state = cleanState(o);
+    if (Object.prototype.hasOwnProperty.call(o, 'draft')) draft = state.draft;
+    else {
+      var legacy = window.localStorage.getItem(DR_KEY);
+      draft = legacy ? cleanDraft(JSON.parse(legacy), state.units) : null;
+    }
+    state.draft = draft; committed = JSON.stringify(state);
+  } catch (e) { readFailure = true; committed = JSON.stringify(state); }
 }
-function save(){
-  try { window.localStorage.setItem(LS_KEY, JSON.stringify(state)); return true; }
-  catch (e) { toast('这台设备的存储写不进去，可能是空间满了，或者浏览器开着无痕模式。'); return false; }
+function save(nextDraft){
+  var chosen = arguments.length ? nextDraft : draft;
+  try {
+    if (readFailure) throw new Error('read failed');
+    state.draft = chosen;
+    var next = JSON.stringify(state);
+    window.localStorage.setItem(LS_KEY, next);
+    committed = next; draft = chosen;
+    try { window.localStorage.removeItem(DR_KEY); } catch (e) {}
+    return true;
+  } catch (e){
+    state = JSON.parse(committed);
+    toast(readFailure ? '本机数据读取失败，已暂停写入。请先导出原始数据后联系维护。' : '没有保存成功，草稿还在。请检查存储空间后重试，不会重复计次。'); return false;
+  }
 }
-function saveDraft(){ try { if (draft) window.localStorage.setItem(DR_KEY, JSON.stringify(draft)); else window.localStorage.removeItem(DR_KEY); } catch (e) {} }
+function saveDraft(){ return save(); }
 
 /* ---------- the method ---------- */
 function unitById(id){ for (var i = 0; i < state.units.length; i++) if (state.units[i].id === id) return state.units[i]; return null; }
@@ -588,6 +657,7 @@ function renderHeader(){
   el.dataset.mode = ui.ready ? 'local' : 'loading';
   el.textContent = ui.ready ? '内容保存在这台设备上' : '正在读取…';
   $('#todayLine').textContent = '今天 ' + dayCn(today());
+  if (readFailure){ el.dataset.mode = 'error'; el.textContent = '本机数据读取异常，已暂停写入；请查看下方备份。'; }
 }
 
 /* ---------- hero: one concept, one skill ---------- */
@@ -651,10 +721,11 @@ function submitUnit(ev){
   if (mode === 'edit'){ u.concept.name = cn; u.skill.name = sn; }
   else {
     if (u) u.closed = true;
-    if (draft){ draft = null; saveDraft(); ui.wizOpen = false; }
+    // Clear the old draft in the same successful write as the new unit.
     state.units.push({ id: uid(), start: today(), closed: false, concept: cleanConcept({ name: cn }), skill: cleanSkill({ name: sn }) });
   }
-  if (!save()) return;
+  if (!save(mode === 'edit' ? draft : null)) return;
+  if (mode !== 'edit') ui.wizOpen = false;
   ui.form = null; msg.textContent = '';
   toast(mode === 'edit' ? '已保存' : '定下来了');
   render();
@@ -687,7 +758,7 @@ function tick(){
   var en = $('#w-enough'); if (en) en.hidden = draft.stepMs < (draft.kind === 'concept' ? 12 : 15) * 60000;
 }
 function ta(id, f, label, ph, rows, optional){
-  return '<div class="field"><label for="' + id + '">' + label + (optional ? ' <span class="opt">可不填</span>' : '') + '</label><textarea class="inp ta" id="' + id + '" data-f="' + f + '" rows="' + (rows || 3) + '" placeholder="' + esc(ph || '') + '">' + esc(draft.f[f] || '') + '</textarea></div>';
+  return '<div class="field"><label for="' + esc(id) + '">' + label + (optional ? ' <span class="opt">可不填</span>' : '') + '</label><textarea class="inp ta" id="' + esc(id) + '" data-f="' + f + '" rows="' + (rows || 3) + '" placeholder="' + esc(ph || '') + '">' + esc(draft.f[f] || '') + '</textarea></div>';
 }
 function gradeHtml(sel){
   var g = [['ok', '讲得出'], ['fuzzy', '有点模糊'], ['no', '讲不出']];
@@ -807,8 +878,8 @@ function finishSession(){
     u.skill.reps.push({ date: t, goal: S(f.goal), did: S(f.did), miss: S(f.miss), fb: S(f.fb, 20), next: S(f.next) });
     state.log.push({ id: uid(), date: t, kind: 'skill', title: u.skill.name, min: min });
   }
-  if (!save()) return;
-  draft = null; ui.wizOpen = false; saveDraft();
+  if (!save(null)) return;
+  ui.wizOpen = false;
   toast('这次学习已保存');
   render(); window.scrollTo(0, 0);
 }
@@ -944,8 +1015,8 @@ function renderLog(){
   var h = '<div class="tablewrap"><table><thead><tr><th scope="col">日期</th><th scope="col">做了什么</th><th scope="col">分钟</th><th scope="col"><span class="sr">操作</span></th></tr></thead><tbody>';
   shown.forEach(function(l){
     var acts = ui.confirmDel === l.id
-      ? '<button class="link danger" type="button" data-l="del" data-id="' + l.id + '">确认删除</button><button class="link" type="button" data-l="keep">不删</button>'
-      : '<button class="link" type="button" data-l="ask" data-id="' + l.id + '">删</button>';
+      ? '<button class="link danger" type="button" data-l="del" data-id="' + esc(l.id) + '">删除用时记录</button><button class="link" type="button" data-l="keep">不删</button>'
+      : '<button class="link" type="button" data-l="ask" data-id="' + esc(l.id) + '">删</button>';
     h += '<tr><td>' + esc(dayCn(l.date)) + '</td><td class="wrap">' + KIND[l.kind] + ' ' + esc(l.title) + '</td><td class="num">' + l.min + '</td><td class="acts">' + acts + '</td></tr>';
   });
   box.innerHTML = h + '</tbody></table></div>';
@@ -957,15 +1028,15 @@ function renderLog(){
 /* ---------- books and long-term goals ---------- */
 function itemActs(type, id){
   return ui.confirmItem === id
-    ? '<button class="link danger" type="button" data-i="del" data-t="' + type + '" data-id="' + id + '">确认删除</button><button class="link" type="button" data-i="keep">不删</button>'
-    : '<button class="link" type="button" data-i="ask" data-id="' + id + '">删</button>';
+    ? '<button class="link danger" type="button" data-i="del" data-t="' + type + '" data-id="' + esc(id) + '">确认删除</button><button class="link" type="button" data-i="keep">不删</button>'
+    : '<button class="link" type="button" data-i="ask" data-id="' + esc(id) + '">删</button>';
 }
 function renderShelf(){
   $('#bookList').innerHTML = state.books.length ? state.books.map(function(b){
-    return '<li><button class="pill" type="button" data-i="book" data-id="' + b.id + '" aria-label="状态：' + BOOK[b.status] + '，点一下切换">' + BOOK[b.status] + '</button><span class="txt' + (b.status === 'done' ? ' off' : '') + '">' + esc(b.title) + '</span><span class="acts">' + itemActs('book', b.id) + '</span></li>';
+    return '<li><button class="pill" type="button" data-i="book" data-id="' + esc(b.id) + '" aria-label="状态：' + BOOK[b.status] + '，点一下切换">' + BOOK[b.status] + '</button><span class="txt' + (b.status === 'done' ? ' off' : '') + '">' + esc(b.title) + '</span><span class="acts">' + itemActs('book', b.id) + '</span></li>';
   }).join('') : '<li class="none">还没有书。</li>';
   $('#goalList').innerHTML = state.goals.length ? state.goals.map(function(g){
-    return '<li><button class="pill" type="button" data-i="goal" data-id="' + g.id + '" aria-label="' + (g.done ? '已完成' : '进行中') + '，点一下切换">' + (g.done ? '已完成' : '进行中') + '</button><span class="txt' + (g.done ? ' off' : '') + '">' + esc(g.text) + '</span><span class="acts">' + itemActs('goal', g.id) + '</span></li>';
+    return '<li><button class="pill" type="button" data-i="goal" data-id="' + esc(g.id) + '" aria-label="' + (g.done ? '已完成' : '进行中') + '，点一下切换">' + (g.done ? '已完成' : '进行中') + '</button><span class="txt' + (g.done ? ' off' : '') + '">' + esc(g.text) + '</span><span class="acts">' + itemActs('goal', g.id) + '</span></li>';
   }).join('') : '<li class="none">还没有长期目标。</li>';
 }
 
@@ -976,16 +1047,20 @@ function renderBackup(){
   var el = $('#bk-state'), n = state.units.length;
   $('#bk-export').disabled = !hasContent();
   if (!hasContent()) el.textContent = '还没有内容，暂时不用备份。';
-  else if (!validDate(at)) el.textContent = '有 ' + n + ' 轮学习、' + state.log.length + ' 条记录，还没有备份过。';
+  else if (!validDate(at)) el.textContent = '有 ' + n + ' 轮学习、' + state.log.length + ' 条记录，还没有导出过备份。';
   else {
     var gap = daysBetween(at, today());
-    el.textContent = '有 ' + n + ' 轮学习、' + state.log.length + ' 条记录。上次备份是' + (gap === 0 ? '今天' : mdCn(at)) + (gap >= 14 ? '，已经过去 ' + gap + ' 天，建议再导出一次。' : '。');
+    el.textContent = '有 ' + n + ' 轮学习、' + state.log.length + ' 条记录。上次导出是' + (gap === 0 ? '今天' : mdCn(at)) + (gap >= 14 ? '，已经过去 ' + gap + ' 天，建议再导出一次。' : '。');
   }
+  if (readFailure){ el.textContent = '本机数据读取异常，已暂停写入。请刷新重试，或导出原始数据后联系维护。'; $('#bk-export').disabled = unreadableRaw == null; }
+  $('#bk-export').textContent = readFailure ? '导出原始数据' : '导出备份';
 }
-function exportBackup(){
-  var text = JSON.stringify({ app: 'study-route', format: 1, exportedAt: new Date().toISOString(), units: state.units, log: state.log, books: state.books, goals: state.goals }, null, 1);
-  var name = 'study-route-backup-' + today() + '.json';
-  var mark = function(){ try { window.localStorage.setItem(BK_KEY, today()); } catch (e) {} renderBackup(); };
+function exportBackup(previous){
+  var recovering = readFailure && unreadableRaw != null && typeof previous !== 'string';
+  if (recovering) previous = unreadableRaw;
+  var text = typeof previous === 'string' ? previous : JSON.stringify(backupData(), null, 1);
+  var name = 'study-route-' + (recovering ? 'raw-recovery-' : typeof previous === 'string' ? 'before-import-' : 'backup-') + today() + '.json';
+  var mark = function(){ if (typeof previous === 'string') return; try { window.localStorage.setItem(BK_KEY, today()); } catch (e) {} renderBackup(); };
   var viaLink = function(){
     var url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
     var a = document.createElement('a'); a.href = url; a.download = name;
@@ -996,40 +1071,51 @@ function exportBackup(){
   try {
     var file = new File([text], name, { type: 'application/json' });
     if (navigator.canShare && navigator.canShare({ files: [file] })){
-      navigator.share({ files: [file], title: '学习航线备份' }).then(function(){ mark(); toast('备份已导出'); }, function(e){ if (!e || e.name !== 'AbortError') viaLink(); });
+      navigator.share({ files: [file], title: '学习航线备份' }).then(function(){ mark(); toast('备份已交给系统分享，请确认保存到“文件”'); }, function(e){ if (!e || e.name !== 'AbortError') viaLink(); });
       return;
     }
   } catch (e) {}
   viaLink();
 }
 function readBackup(file){
+  pendingImport = null; $('#bk-confirm').hidden = true;
+  if (file.size > 8 * 1024 * 1024){ toast('备份超过 8 MB，请先联系维护，当前内容未改动。'); return; }
   var fr = new FileReader();
   fr.onerror = function(){ toast('这个文件读不出来。'); };
   fr.onload = function(){
     var o = null; try { o = JSON.parse(String(fr.result)); } catch (e) {}
-    if (!o || typeof o !== 'object' || o.app !== 'study-route'){ toast('这不是学习航线的备份文件。'); return; }
+    if (!validBackup(o)){ toast('备份格式、记录编号或草稿不正确，未导入。请使用学习航线导出的格式 1 文件。'); return; }
     var p = cleanState(o);
     if (!p.units.length && !p.log.length && !p.books.length && !p.goals.length){ toast('备份里没有可用的内容。'); return; }
+    if (draft && p.draft){ toast('当前和备份各有一份草稿。请先完成或导出并放弃当前草稿，再导入这份备份。'); return; }
     pendingImport = p;
-    $('#bk-confirm-text').textContent = '备份里有 ' + p.units.length + ' 轮学习、' + p.log.length + ' 条记录、' + p.books.length + ' 本书、' + p.goals.length + ' 个长期目标。导入后会和现有内容合并，相同的以备份为准。';
+    $('#bk-confirm-text').textContent = '备份里有 ' + p.units.length + ' 轮学习、' + p.log.length + ' 条记录、' + p.books.length + ' 本书、' + p.goals.length + ' 个长期目标' + (p.draft ? '，还有一份未完成草稿' : '') + '。相同编号以备份为准，当前草稿所属轮次会保留；导入前会保存副本。';
     $('#bk-confirm').hidden = false;
   };
   fr.readAsText(file);
 }
 function mergeById(cur, inc){
-  var map = {}, order = [];
+  var map = Object.create(null), order = [];
   cur.concat(inc).forEach(function(x){ if (!(x.id in map)) order.push(x.id); map[x.id] = x; });
   return order.map(function(id){ return map[id]; });
 }
 function applyImport(){
   if (!pendingImport) return;
-  var p = pendingImport; pendingImport = null; $('#bk-confirm').hidden = true;
-  state.units = mergeById(state.units, p.units).sort(function(a, b){ return a.start < b.start ? -1 : a.start > b.start ? 1 : 0; });
+  var p = pendingImport, incoming = p.units;
+  if (draft && p.draft){ toast('当前和备份都有草稿，请先处理当前草稿。'); return; }
+  if (!beforeImport()) return;
+  // Keep the unit underlying a current draft, so imported old notes cannot overwrite its context.
+  if (draft) incoming = incoming.filter(function(u){ return u.id !== draft.unitId; });
+  state.units = mergeById(state.units, incoming).sort(function(a, b){ return a.start < b.start ? -1 : a.start > b.start ? 1 : 0; });
   state.log = mergeById(state.log, p.log); state.books = mergeById(state.books, p.books); state.goals = mergeById(state.goals, p.goals);
+  var nextDraft = draft || p.draft || null;
   var open = state.units.filter(function(u){ return !u.closed; });
-  open.slice(0, -1).forEach(function(u){ u.closed = true; });
-  if (!save()) return;
-  render(); toast('已导入');
+  var activeId = nextDraft ? nextDraft.unitId : open.length ? open[open.length - 1].id : null;
+  state.units.forEach(function(u){ if (!u.closed || u.id === activeId) u.closed = u.id !== activeId; });
+  if (!save(nextDraft)) return;
+  pendingImport = null; $('#bk-confirm').hidden = true;
+  ui.wizOpen = false; ui.review = null;
+  render(); toast('已导入；可导出导入前的副本');
 }
 
 /* ---------- toast ---------- */
@@ -1093,7 +1179,7 @@ $('#guideView').addEventListener('click', function(ev){
   var act2 = a.dataset.a;
   if (act2 === 'concept' || act2 === 'skill') startSession(act2);
   else if (act2 === 'resume'){ ui.wizOpen = true; draft.beat = Date.now(); render(); focusGuide(); }
-  else if (act2 === 'discard'){ draft = null; saveDraft(); render(); }
+  else if (act2 === 'discard'){ if (save(null)) render(); }
   else if (act2 === 'review'){ var d = dueList(); if (d.length){ ui.review = { unitId: d[0].id, revealed: false }; render(); focusGuide(); } }
   else if (act2 === 'rv-reveal'){ ui.review.revealed = true; var keep = $('#rv-text').value; render(); $('#rv-text').value = keep; }
   else if (act2 === 'rv-quit'){ ui.review = null; render(); }
@@ -1107,7 +1193,7 @@ $('#logBody').addEventListener('click', function(ev){
   var b = ev.target.closest('[data-l]'); if (!b) return;
   if (b.dataset.l === 'ask'){ ui.confirmDel = b.dataset.id; renderLog(); }
   else if (b.dataset.l === 'keep'){ ui.confirmDel = null; renderLog(); }
-  else { state.log = state.log.filter(function(l){ return l.id !== b.dataset.id; }); ui.confirmDel = null; if (save()){ toast('已删除这条记录'); render(); } }
+  else { state.log = state.log.filter(function(l){ return l.id !== b.dataset.id; }); ui.confirmDel = null; if (save()){ toast('已删除用时记录，学习内容和练习次数保留'); render(); } }
 });
 $('#moreLog').addEventListener('click', function(){ ui.showAllLog = true; renderLog(); });
 
@@ -1146,7 +1232,8 @@ $('.shelf').addEventListener('click', function(ev){
   if (save()){ renderShelf(); renderBackup(); }
 });
 
-$('#bk-export').addEventListener('click', exportBackup);
+$('#bk-export').addEventListener('click', function(){ exportBackup(); });
+$('#bk-previous').addEventListener('click', exportBeforeImport);
 $('#bk-import').addEventListener('click', function(){ $('#bk-file').click(); });
 $('#bk-file').addEventListener('change', function(){ var f = this.files && this.files[0]; this.value = ''; if (f) readBackup(f); });
 $('#bk-yes').addEventListener('click', applyImport);
