@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>学习航线</title>
-<meta name="description" content="每周弄懂一个概念、练一个技能，一步一步带着学。">
+<meta name="description" content="记录当前学习状态、下一步任务与掌握证据，生成交给 GPT 的接手文档。">
 <meta name="theme-color" content="#F1F4F6" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0F1417" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -307,6 +307,35 @@ td.wrap{white-space:normal;min-width:150px}
 .pill{flex:none;border:1px solid var(--line-2);border-radius:999px;background:var(--surface);font-size:12.5px;padding:3px 10px;line-height:1.4}
 .addrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
 .addrow .btn{height:44px;padding-inline:16px;font-size:14px}
+/* One active learning project, eight small views. */
+button,textarea,select{font:inherit;color:inherit}
+.app{max-width:900px}
+.ws-nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;background:var(--bg)}
+.ws-nav button{min-height:44px;padding:9px 4px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:14px}
+.ws-nav button[aria-current="page"]{background:var(--study);color:var(--surface);border-color:var(--study);font-weight:600}
+#ws-view{display:grid;gap:16px;min-width:0}
+.ws-view-title{font-size:15px;color:var(--ink-2);font-weight:500}
+.ws-block{display:grid;gap:14px;min-width:0}
+.ws-task-title{font-family:var(--font-display);font-size:23px;line-height:1.45;font-weight:400;overflow-wrap:anywhere}
+.ws-form{display:grid;gap:14px;min-width:0}
+.ws-form .field{display:grid;gap:5px;min-width:0}
+.ws-form select{font-size:16px;min-height:44px;width:100%;max-width:100%;background:var(--surface);border:1px solid var(--line-2);border-radius:6px;padding:8px}
+.ws-facts{display:grid;grid-template-columns:80px minmax(0,1fr);gap:10px;margin:0}
+.ws-facts dt{color:var(--ink-2)}
+.ws-facts dd{margin:0;overflow-wrap:anywhere}
+.ws-list{display:grid;gap:8px;padding-left:18px;list-style:disc}
+.ws-pre{white-space:pre-wrap;overflow-wrap:anywhere}
+.ws-cards,.ws-route{display:grid;gap:14px}
+.ws-cards>li,.ws-route>li{display:grid;gap:9px;border-top:1px solid var(--line);padding-top:14px;min-width:0;overflow-wrap:anywhere}
+.ws-mini{display:flex;flex-wrap:wrap;gap:12px}
+.ws-mini button{min-height:40px}
+.ws-details>summary,details>summary{cursor:pointer;min-height:44px;padding-block:9px}
+.ws-details[open]>summary{margin-bottom:10px}
+#legacy-board>.cols{margin-top:16px}
+#legacy-board{padding:12px}
+#backup-panel>.backup{border:0;padding:12px 0 0}
+#ws-handover-text{width:100%;max-width:100%;min-height:300px;white-space:pre-wrap}
+@media(min-width:700px){.ws-nav{grid-template-columns:repeat(8,minmax(0,1fr))}}
 </style>
 </head>
 <body>
@@ -319,6 +348,19 @@ td.wrap{white-space:normal;min-width:150px}
     <p class="status" id="status" data-mode="loading">正在读取…</p>
   </header>
 
+  <nav class="ws-nav" id="ws-nav" aria-label="学习页面">
+    <button type="button" data-ws-go="now" aria-current="page">现在</button>
+    <button type="button" data-ws-go="next">下一步</button>
+    <button type="button" data-ws-go="route">路线</button>
+    <button type="button" data-ws-go="records">记录</button>
+    <button type="button" data-ws-go="evidence">证据</button>
+    <button type="button" data-ws-go="questions">问题</button>
+    <button type="button" data-ws-go="teacher">老师</button>
+    <button type="button" data-ws-go="handover">接手</button>
+  </nav>
+  <main id="ws-view" aria-label="当前学习页面"></main>
+  <details class="panel" id="legacy-board" hidden>
+  <summary class="h2">原有练习、用时和书单</summary>
   <div class="cols">
     <div class="col">
       <section class="hero" aria-labelledby="heroH">
@@ -366,7 +408,7 @@ td.wrap{white-space:normal;min-width:150px}
             <li><b>找缺口</b>写下它不是什么，把说不清的地方写成一个问题。<span>边界清楚了，才知道概念管到哪里。</span></li>
             <li><b>隔天再讲</b>过一天以后不看笔记再讲一次，之后按 1、3、7、14、30 天复习。<span>当时会不等于过几天还会。</span></li>
           </ol>
-          <p>概念算学完，要过四关：说清、举例、划界、隔天还讲得出。技能算练完，要有 3 次带目标、带反馈的练习。</p>
+          <p>概念练习有四关：说清、举例、划界、隔天复述。技能满 3 次表示完成练习流程；真正掌握要看独立应用的具体证据。</p>
           <p class="hint">依据：回想练习和间隔复习是学习研究里证据最强的两种方法；自己讲一遍来自费曼方法；技能部分来自刻意练习。</p>
         </div>
       </details>
@@ -422,6 +464,12 @@ td.wrap{white-space:normal;min-width:150px}
         </div>
       </section>
 
+
+    </div>
+  </div>
+  </details>
+  <details class="panel" id="backup-panel">
+    <summary class="h2">备份与导入学习方案</summary>
       <section class="panel backup" aria-labelledby="bkH">
         <h2 class="h2" id="bkH">备份</h2>
         <p id="bk-state">还没有内容，暂时不用备份。</p>
@@ -440,10 +488,8 @@ td.wrap{white-space:normal;min-width:150px}
         </div>
         <p class="hint">内容只存在这台设备上。换手机或删除这个 app 之前先导出一份，存到“文件”里或发给自己。</p>
       </section>
-
-      <p class="foot">版本 <span id="ver"></span></p>
-    </div>
-  </div>
+  </details>
+  <p class="foot">版本 <span id="ver"></span></p>
 
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 </div>
@@ -476,7 +522,7 @@ function uid(){ return 'x' + Date.now().toString(36) + Math.floor(Math.random() 
 function mmss(ms){ var s = Math.max(0, Math.floor(ms / 1000)); return pad(Math.floor(s / 60)) + ':' + pad(s % 60); }
 
 /* ---------- state ---------- */
-var APP_VERSION = '1.0.2';
+var APP_VERSION = '1.1.0';
 var LS_KEY = 'study-route.v1', BK_KEY = 'study-route.backupAt', DR_KEY = 'study-route.draft';
 var IV = [1, 3, 7, 14, 30, 60];          /* review intervals in days, by box */
 var REPS = 3;                             /* practice rounds that complete a skill */
@@ -484,7 +530,7 @@ var KIND = { concept: '学概念', skill: '练技能', review: '复习' };
 var BOOK = { want: '想读', reading: '在读', done: '读完' };
 var FB = ['对照范例', '请人看', '让 AI 挑错', '录下来回看', '只凭自己感觉'];
 
-var state = { units: [], log: [], books: [], goals: [], draft: null };
+var state = { units: [], log: [], books: [], goals: [], draft: null, workspace: null };
 var readFailure = false, unreadableRaw = null;
 var committed = JSON.stringify(state);
 var ui = { ready: false, range: 14, form: null, wizOpen: false, review: null, confirmDel: null, confirmItem: null, showAllLog: false, confirmNew: false };
@@ -526,9 +572,9 @@ function cleanDraft(d, units){
   });
   return { unitId: d.unitId, kind: d.kind, step: d.step, f: f, elapsed: clampInt(d.elapsed, 0, 86400000, 0), stepMs: clampInt(d.stepMs, 0, 86400000, 0), beat: Date.now(), first: !!d.first, revealed: !!d.revealed, grade: ['ok','fuzzy','no'].indexOf(d.grade) >= 0 ? d.grade : null };
 }
-function backupData(){ return { app: 'study-route', format: 1, exportedAt: new Date().toISOString(), units: state.units, log: state.log, books: state.books, goals: state.goals, draft: draft }; }
+function backupData(){ return { app: 'study-route', format: 2, exportedAt: new Date().toISOString(), units: state.units, log: state.log, books: state.books, goals: state.goals, draft: draft, workspace: state.workspace }; }
 function validBackup(o){
-  if (!isObj(o) || o.app !== 'study-route' || o.format !== 1) return false;
+  if (!isObj(o) || o.app !== 'study-route' || [1,2].indexOf(o.format) < 0 || o.workspace != null && !validWorkspace(o.workspace)) return false;
   if (!validRows(o.units, cleanUnit) || !validRows(o.log, cleanLog) || !validRows(o.books, cleanBook) || !validRows(o.goals, cleanGoal)) return false;
   if (!o.units.every(function(u){ return isObj(u.concept) && isObj(u.skill) && (!u.skill.reps || Array.isArray(u.skill.reps) && u.skill.reps.length <= 50 && u.skill.reps.every(function(r){ return isObj(r) && validDate(r.date); })); })) return false;
   return o.draft == null || !!cleanDraft(o.draft, o.units);
@@ -574,7 +620,7 @@ function cleanState(o){
   o = o || {};
   var arr = function(a, f){ return Array.isArray(a) ? a.map(f).filter(Boolean) : []; };
   var units = arr(o.units, cleanUnit);
-  return { units: units, log: arr(o.log, cleanLog), books: arr(o.books, cleanBook), goals: arr(o.goals, cleanGoal), draft: cleanDraft(o.draft, units) };
+  return { units: units, log: arr(o.log, cleanLog), books: arr(o.books, cleanBook), goals: arr(o.goals, cleanGoal), draft: cleanDraft(o.draft, units), workspace: cleanWorkspace(o.workspace) };
 }
 
 /* ---------- storage: this device only ---------- */
@@ -583,6 +629,7 @@ function load(){
     var raw = window.localStorage.getItem(LS_KEY); unreadableRaw = raw;
     var o = raw ? JSON.parse(raw) : {};
     if (raw && (!isObj(o) || !Array.isArray(o.units) || !Array.isArray(o.log) || !Array.isArray(o.books) || !Array.isArray(o.goals))) throw new Error('invalid local data');
+    if (o.workspace != null && !validWorkspace(o.workspace)) throw new Error('invalid workspace');
     state = cleanState(o);
     if (Object.prototype.hasOwnProperty.call(o, 'draft')) draft = state.draft;
     else {
@@ -608,6 +655,259 @@ function save(nextDraft){
   }
 }
 function saveDraft(){ return save(); }
+
+/* Learning workspace v1: one project, one next task, evidence instead of scores. */
+var WS_PAGES = { now: '当前学习状态', next: '下一步任务', route: '学习路线', records: '学习记录', evidence: '掌握证据', questions: '问题停车场', teacher: 'AI 老师偏好', handover: '交给 GPT' };
+var WS_ASSESS = { unknown: '尚未判断', partial: '部分掌握', independent: '能独立完成', transfer: '能在新场景独立完成' };
+var WS_LEVEL = { guided: '有提示完成', independent: '独立完成', transfer: '新场景独立完成' };
+var WS_SOURCE = { self: '自己核对', ai: '记录的 AI 反馈', person: '记录的他人反馈' };
+var WS_VERDICT = { unreviewed: '尚未核对', pass: '对照标准符合', needs_work: '仍需练习' };
+var WS_WORK = ['question', 'intention', 'example', 'ifA', 'ifB', 'observation', 'guess', 'difficulty', 'nextIdea'];
+var wsPage = 'now';
+function ownChoice(map, value){ return typeof value === 'string' && Object.prototype.hasOwnProperty.call(map, value); }
+function wsText(value, max){ return typeof value === 'string' && value.length <= max; }
+function wsTexts(rows, max, count){ return Array.isArray(rows) && rows.length <= count && rows.every(function(x){ return wsText(x, max) && !!x.trim(); }); }
+function wsRows(rows, validate, max){ return Array.isArray(rows) && rows.length <= max && validRows(rows, validate); }
+function validTask(t){
+  return isObj(t) && validId(t.id) && wsText(t.title, 240) && !!t.title.trim() && wsText(t.want, 1000) && wsText(t.example, 1000)
+    && wsText(t.criteria, 1500) && !!t.criteria.trim() && ['todo','doing','done'].indexOf(t.status) >= 0 && isObj(t.work)
+    && WS_WORK.every(function(k){ return wsText(t.work[k], 2000); });
+}
+function validWorkspace(w){
+  if (!isObj(w) || w.version !== 1 || !isObj(w.project) || !isObj(w.teacher)) return false;
+  var p = w.project;
+  if (!validId(p.id) || !wsText(p.title, 120) || !p.title.trim() || !wsText(p.goal, 1000) || !wsText(p.stage, 120)
+    || !wsText(p.concept, 120) || !wsText(p.skill, 240) || !ownChoice(WS_ASSESS, p.assessment)
+    || !wsText(p.assessmentNote, 1000) || !wsTexts(p.weaknesses, 500, 20) || !validTask(w.task)) return false;
+  if (!wsRows(w.route, function(m){ return wsText(m.title, 160) && !!m.title.trim() && wsText(m.criteria, 1500) && ['planned','current','done'].indexOf(m.status) >= 0; }, 200)
+    || w.route.filter(function(m){ return m.status === 'current'; }).length > 1) return false;
+  if (!wsRows(w.sessions, function(s){ return validDate(s.date) && ['completed','paused'].indexOf(s.kind) >= 0 && wsText(s.summary, 2000)
+    && wsText(s.concept, 120) && wsText(s.skill, 240) && wsText(s.stage, 120) && validTask(s.task); }, 5000)) return false;
+  var tasks = [w.task.id].concat(w.sessions.map(function(s){ return s.task.id; }));
+  if (!wsRows(w.evidence, function(e){ return validDate(e.date) && wsText(e.title, 240) && !!e.title.trim() && wsText(e.artifact, 20000)
+    && !!e.artifact.trim() && wsText(e.feedback, 2000) && ownChoice(WS_LEVEL, e.level) && ownChoice(WS_SOURCE, e.source)
+    && ownChoice(WS_VERDICT, e.verdict) && (e.source === 'self' && e.verdict === 'unreviewed' || !!e.feedback.trim())
+    && (e.taskId === null || validId(e.taskId) && tasks.indexOf(e.taskId) >= 0); }, 5000)) return false;
+  if (!wsRows(w.questions, function(q){ return wsText(q.text, 1000) && !!q.text.trim() && wsText(q.answer, 3000)
+    && ['parked','resolved'].indexOf(q.status) >= 0 && (q.status !== 'resolved' || !!q.answer.trim()) && validDate(q.date); }, 1000)) return false;
+  return ['style','pace','approach','avoid'].every(function(k){ return wsText(w.teacher[k], 2000); });
+}
+function cleanWorkspace(w){ return w == null ? null : validWorkspace(w) ? JSON.parse(JSON.stringify(w)) : null; }
+function wsWork(){ var f = {}; WS_WORK.forEach(function(k){ f[k] = ''; }); return f; }
+function wsDefaults(){ return {
+  version: 1,
+  project: { id: uid(), title: '我的学习项目', goal: '', stage: '起步', concept: '', skill: '', assessment: 'unknown', assessmentNote: '', weaknesses: [] },
+  route: [], task: { id: uid(), title: '写下一个想弄清的具体问题', want: '', example: '', criteria: '说清想知道什么，以及从哪个例子开始。', status: 'todo', work: wsWork() },
+  sessions: [], evidence: [], questions: [],
+  teacher: { style: '用简单、具体的话解释，给日常例子。', pace: '每次只安排一个小任务；先问一个问题，等我回答。', approach: '先让我尝试，再根据我的答案提示；检查我能否独立应用。', avoid: '不直接替我完成；区分证据和猜测；不要把读过、练过或 AI 的解释当成已经掌握。' }
+}; }
+function wsCommit(change){
+  var next = state.workspace ? JSON.parse(JSON.stringify(state.workspace)) : wsDefaults();
+  change(next);
+  if (!validWorkspace(next)){ toast('有些内容不完整或太长，暂未保存。'); return false; }
+  state.workspace = next;
+  if (!save()) return false;
+  return true;
+}
+function wsInput(id, label, value, max, rows, placeholder){
+  return '<div class="field"><label for="' + id + '">' + esc(label) + '</label><textarea class="inp ta" id="' + id + '" maxlength="' + max + '" rows="' + (rows || 2) + '" placeholder="' + esc(placeholder || '') + '">' + esc(value || '') + '</textarea></div>';
+}
+function wsSelect(id, label, map, value){
+  return '<div class="field"><label for="' + id + '">' + esc(label) + '</label><select class="inp" id="' + id + '">' + Object.keys(map).map(function(k){ return '<option value="' + k + '"' + (k === value ? ' selected' : '') + '>' + esc(map[k]) + '</option>'; }).join('') + '</select></div>';
+}
+function wsButtons(page, label){ return '<button class="btn" type="button" data-ws-go="' + page + '">' + esc(label) + '</button>'; }
+function wsList(rows){ return rows.length ? '<ul class="ws-list">' + rows.map(function(s){ return '<li>' + esc(s) + '</li>'; }).join('') + '</ul>' : '<p class="hint">还没有记录。</p>'; }
+function wsPanel(title, html){ return '<section class="panel ws-block"><h3 class="h2">' + esc(title) + '</h3>' + html + '</section>'; }
+function wsFieldValue(id, max){ return S($('#' + id).value, max); }
+function wsEmpty(){ return '<section class="hero ws-block"><p class="eyebrow">一条路线 · 一次只做一步</p><h3 class="goal-title">先放好当前的学习上下文</h3><p>有学习方案，就从下方“备份与导入”载入；没有方案，也可以自己创建。原来的练习、记录和书单仍在“记录”页。</p><div class="actions">' + wsButtons('route','创建学习项目') + wsButtons('records','查看原有记录') + '</div></section>'; }
+function wsNow(w){
+  var p = w.project, task = w.task, done = w.sessions.filter(function(s){ return s.kind === 'completed'; });
+  return '<section class="hero ws-block"><p class="eyebrow">' + esc(p.stage || '当前阶段') + '</p><h3 class="goal-title">' + esc(p.title) + '</h3><p>' + esc(p.goal || '目标还可以在路线页补充。') + '</p><dl class="ws-facts"><dt>正在学</dt><dd>' + esc(p.concept || '概念待填写') + '</dd><dt>正在练</dt><dd>' + esc(p.skill || '小技能待填写') + '</dd><dt>掌握自评</dt><dd>' + esc(WS_ASSESS[p.assessment]) + ' <span class="tag">待证据检验</span></dd></dl>' + (p.assessmentNote ? '<p class="hint">' + esc(p.assessmentNote) + '</p>' : '') + '</section>'
+    + wsPanel(task.status === 'done' ? '这一步已完成' : '下一步只做这个', '<p class="ws-task-title">' + esc(task.title) + '</p><p class="hint">完成标准：' + esc(task.criteria) + '</p><div class="actions">' + wsButtons(task.status === 'done' ? 'handover' : 'next', task.status === 'done' ? '交给 GPT，确定下一步' : '开始这一步') + '</div>')
+    + wsPanel('已经做到什么', '<p>已保存 ' + done.length + ' 次完成记录、' + w.evidence.length + ' 份证据。</p>' + (done.length ? '<p class="ws-pre">最近一次：' + esc(done[done.length - 1].summary) + '</p>' : '<p class="hint">暂时没有具体完成记录。阶段名称和自评不算完成证据。</p>'))
+    + wsPanel('哪里还没掌握', wsList(p.weaknesses) + '<div class="actions">' + wsButtons('evidence','看掌握证据') + wsButtons('handover','生成接手文档') + '</div>');
+}
+function wsNext(w){
+  var t = w.task, f = t.work;
+  if (t.status === 'done') return wsPanel('这一步已经保存', '<p class="ws-task-title">' + esc(t.title) + '</p><p>记录和证据已保留。完成一次练习不会自动升级掌握程度，也不会自动跳到下一课。</p><div class="actions">' + wsButtons('handover','让 GPT 帮我确定下一步') + wsButtons('route','设置下一步任务') + '</div>');
+  var h = '<section class="panel ws-block"><p class="eyebrow">当前只做一个任务</p><h3 class="ws-task-title">' + esc(t.title) + '</h3><p class="hint">完成标准：' + esc(t.criteria) + '</p>'
+    + (t.want ? '<p>想知道：' + esc(t.want) + '</p>' : '') + (t.example ? '<p class="hint">起步例子：' + esc(t.example) + '</p>' : '')
+    + '<form id="ws-task-form" class="ws-form" novalidate>'
+    + wsInput('ws-question','1. 你提出的具体小问题',f.question,2000,2,'只问一个可以检查的点。')
+    + wsInput('ws-intention','2. 你到底想知道什么',f.intention,2000,2,'这个问题的答案，会帮你分清什么？')
+    + wsInput('ws-example','3. 从哪个具体例子开始',f.example,2000,2,'写一个马上可以拿来检查的例子。')
+    + '<details class="ws-details"><summary>做检查时展开：A/B、证据和猜测</summary><div class="ws-form">'
+    + wsInput('ws-ifA','动手前：结果是 A，说明什么',f.ifA,2000,2,'先写预测；也可写“不适用”并说明理由。')
+    + wsInput('ws-ifB','动手前：结果是 B，说明什么',f.ifB,2000,2)
+    + wsInput('ws-observation','检查后：实际看到了什么证据',f.observation,2000,2,'只写观察到的结果。')
+    + wsInput('ws-guess','哪些解释还只是猜测',f.guess,2000,2,'AI 给的解释也需要证据支持。') + '</div></details>'
+    + wsInput('ws-difficulty','还卡在哪里（可选）',f.difficulty,2000,2)
+    + wsInput('ws-nextIdea','想交给 GPT 的下一步想法（可选）',f.nextIdea,2000,2)
+    + wsSelect('ws-complete-level','这次是怎么完成的',WS_LEVEL,'guided')
+    + '<p class="hint">前三项写全才可记录完成。这里保存的是你的练习产出，App 不会自动判定答案正确。</p><p class="msg" id="ws-task-msg" role="status"></p><div class="actions"><button class="btn" type="submit">保存这次完成与证据</button><button class="btn ghost" type="button" data-ws-action="save-task">保存进度，稍后继续</button></div></form></section>';
+  return h;
+}
+function wsCaptureTask(){
+  if (wsPage !== 'next' || !state.workspace || state.workspace.task.status === 'done') return true;
+  var work = {}; WS_WORK.forEach(function(k){ work[k] = String($('#ws-' + k).value || '').slice(0,2000); });
+  if (JSON.stringify(work) === JSON.stringify(state.workspace.task.work)) return true;
+  return wsCommit(function(w){ w.task.work = work; w.task.status = WS_WORK.some(function(k){ return !!work[k]; }) ? 'doing' : 'todo'; });
+}
+function wsFinish(){
+  if (!state.workspace || state.workspace.task.status === 'done') return;
+  if (!wsCaptureTask()) return;
+  var f = state.workspace.task.work, msg = $('#ws-task-msg');
+  if (!f.question.trim() || !f.intention.trim() || !f.example.trim()){ msg.textContent = '先写全具体问题、想知道什么，以及起步例子。'; return; }
+  if (state.workspace.sessions.length >= 5000 || state.workspace.evidence.length >= 5000){ msg.textContent = '记录较多，请先导出备份并联系维护。'; return; }
+  var level = $('#ws-complete-level').value;
+  if (!ownChoice(WS_LEVEL,level)) level = 'guided';
+  if (!wsCommit(function(w){
+    w.task.status = 'done';
+    var artifact = ['具体问题：' + f.question, '想知道：' + f.intention, '起步例子：' + f.example];
+    [['ifA','A 说明'],['ifB','B 说明'],['observation','观察证据'],['guess','仍是猜测']].forEach(function(x){ if (f[x[0]]) artifact.push(x[1] + '：' + f[x[0]]); });
+    w.sessions.push({ id: uid(), date: today(), kind: 'completed', concept: w.project.concept, skill: w.project.skill, stage: w.project.stage, summary: f.question, task: JSON.parse(JSON.stringify(w.task)) });
+    w.evidence.push({ id: uid(), date: today(), taskId: w.task.id, title: w.task.title, artifact: artifact.join('\n'), level: level, source: 'self', verdict: 'unreviewed', feedback: f.difficulty });
+  })) return;
+  render(); toast('完成记录和证据已保存，掌握自评保持原值。');
+}
+function wsRoute(w){
+  var p = w ? w.project : wsDefaults().project, t = w ? w.task : wsDefaults().task;
+  var h = wsPanel('当前项目', '<form id="ws-project-form" class="ws-form" novalidate>'
+    + wsInput('ws-title','项目名称',p.title,120,1) + wsInput('ws-goal','最终想做到什么',p.goal,1000,2)
+    + wsInput('ws-stage','当前阶段或课次',p.stage,120,1) + wsInput('ws-concept','当前概念',p.concept,120,1)
+    + wsInput('ws-skill','当前小技能',p.skill,240,2) + wsSelect('ws-assessment','掌握程度（自己的判断）',WS_ASSESS,p.assessment)
+    + wsInput('ws-assessmentNote','为什么这样判断',p.assessmentNote,1000,2)
+    + wsInput('ws-weaknesses','待练薄弱点（每行一个）',p.weaknesses.join('\n'),5000,3)
+    + '<p class="hint">路线按能力目标推进，不设到期日；自评可以更新，但不能代替掌握证据。</p><p class="msg" id="ws-project-msg" role="alert"></p><button class="btn" type="submit">保存项目</button></form>');
+  if (!w) return h;
+  h = '<details class="panel ws-details"><summary class="h2">编辑项目、自评与薄弱点</summary>' + h.replace('<section class="panel ws-block"><h3 class="h2">当前项目</h3>','').replace(/<\/section>$/,'') + '</details>';
+  var status = { planned:'以后再做', current:'当前阶段', done:'阶段已完成（自评）' };
+  h += wsPanel('学习路线', (w.route.length ? '<ol class="ws-route">' + w.route.map(function(m){ return '<li><span class="tag">' + esc(status[m.status]) + '</span><b>' + esc(m.title) + '</b><p class="hint">完成标准：' + esc(m.criteria || '待补充') + '</p><div class="ws-mini"><button class="link" type="button" data-ws-route="current" data-id="' + esc(m.id) + '">设为当前</button><button class="link" type="button" data-ws-route="done" data-id="' + esc(m.id) + '">阶段完成</button><button class="link" type="button" data-ws-route="planned" data-id="' + esc(m.id) + '">留待以后</button></div></li>'; }).join('') + '</ol>' : '<p class="hint">先写眼前这一步，后面的路线可以随学习调整。</p>')
+    + '<details class="ws-details"><summary>添加一个阶段</summary><form id="ws-route-form" class="ws-form">' + wsInput('ws-route-title','阶段名称','',160,1) + wsInput('ws-route-criteria','怎样算这一阶段完成','',1500,2) + '<button class="btn ghost" type="submit">添加到路线</button></form></details>');
+  h += wsPanel('设置一个下一步任务', '<form id="ws-new-task-form" class="ws-form" novalidate>' + wsInput('ws-new-title','只做什么',t.status === 'done' ? '' : t.title,240,2)
+    + wsInput('ws-new-want','想知道什么',t.status === 'done' ? '' : t.want,1000,2) + wsInput('ws-new-example','起步例子',t.status === 'done' ? '' : t.example,1000,2)
+    + wsInput('ws-new-criteria','完成标准',t.status === 'done' ? '' : t.criteria,1500,2)
+    + '<p class="hint">保存后只保留一个当前任务；旧任务的完成记录保留，未完成的产出也会存入记录。</p><p class="msg" id="ws-new-task-msg" role="alert"></p><button class="btn" type="submit">设置下一步</button></form>');
+  return h;
+}
+function wsRecords(w){
+  if (!w.sessions.length) return wsPanel('学习记录','<p class="hint">还没有项目学习记录。做完下一步后，会把任务和你的产出一起留存。</p>');
+  return wsPanel('学习记录','<ul class="ws-cards">' + w.sessions.slice().reverse().map(function(s){ return '<li><p class="eyebrow">' + esc(s.date) + ' · ' + (s.kind === 'completed' ? '完成一次任务' : '调整前的未完成产出') + '</p><b>' + esc(s.task.title) + '</b><p class="ws-pre">' + esc(s.summary) + '</p><details><summary>查看当时的任务与产出</summary><p class="hint">' + esc(s.stage) + ' · ' + esc(s.concept) + ' · ' + esc(s.skill) + '</p><p>完成标准：' + esc(s.task.criteria) + '</p>' + WS_WORK.filter(function(k){ return !!s.task.work[k]; }).map(function(k){ return '<p class="ws-pre"><b>' + esc(wsWorkLabel(k)) + '</b>：' + esc(s.task.work[k]) + '</p>'; }).join('') + '</details></li>'; }).join('') + '</ul>');
+}
+function wsWorkLabel(k){ return {question:'具体问题',intention:'想知道',example:'起步例子',ifA:'A 说明',ifB:'B 说明',observation:'观察证据',guess:'仍是猜测',difficulty:'卡住的地方',nextIdea:'下一步想法'}[k]; }
+function wsEvidence(w){
+  var list = '<p class="hint">自评、练习次数和 AI 的解释都不能单独证明掌握。这里只保留具体产出及其反馈来源。</p>';
+  list += w.evidence.length ? '<ul class="ws-cards">' + w.evidence.slice().reverse().map(function(e){ return '<li><p class="eyebrow">' + esc(e.date) + ' · ' + esc(WS_LEVEL[e.level]) + '</p><b>' + esc(e.title) + '</b><p class="hint">' + esc(WS_SOURCE[e.source]) + ' · ' + esc(WS_VERDICT[e.verdict]) + '</p><p class="ws-pre">' + esc(e.artifact) + '</p>' + (e.feedback ? '<p class="ws-pre">反馈：' + esc(e.feedback) + '</p>' : '') + '</li>'; }).join('') + '</ul>' : '<p>还没有掌握证据。完成任务后会自动保留你的产出，但默认标为“尚未核对”。</p>';
+  return wsPanel('掌握证据',list) + wsPanel('补充一次应用或核对','<form id="ws-evidence-form" class="ws-form" novalidate>'
+    + wsInput('ws-e-title','这份证据说明什么','',240,2) + wsInput('ws-e-artifact','具体产出或新场景应用','',12000,4)
+    + wsSelect('ws-e-level','完成方式',WS_LEVEL,'guided') + wsSelect('ws-e-source','反馈来源',WS_SOURCE,'self') + wsSelect('ws-e-verdict','记录的判断',WS_VERDICT,'unreviewed')
+    + wsInput('ws-e-feedback','反馈内容、检查依据或仍需练的地方','',2000,3) + '<p class="hint">选择符合标准只是记录这次判断，App 不会自动升级掌握程度。</p><p class="msg" id="ws-e-msg" role="alert"></p><button class="btn" type="submit">保存这份证据</button></form>');
+}
+function wsQuestions(w){
+  return wsPanel('问题停车场','<p class="hint">先停在这里，当前任务做完再处理。记录问题不会改变下一步任务。</p><form id="ws-question-form" class="ws-form">' + wsInput('ws-park-text','暂时不展开的问题','',1000,2) + '<button class="btn ghost" type="submit">先停在这里</button></form>'
+    + '<ul class="ws-cards">' + w.questions.slice().reverse().map(function(q){ return '<li><span class="tag">' + (q.status === 'resolved' ? '已记录解答' : '暂时停放') + '</span><b>' + esc(q.text) + '</b><form class="ws-form" data-ws-answer="' + esc(q.id) + '">' + wsInput('ws-answer-' + q.id,'解答、证据或仍有疑问的地方',q.answer,3000,2) + '<div class="actions"><button class="btn ghost" type="submit">' + (q.status === 'resolved' ? '更新解答' : '保存解答并标记已解决') + '</button>' + (q.status === 'resolved' ? '<button class="link" type="button" data-ws-reopen="' + esc(q.id) + '">仍有疑问，重新停放</button>' : '') + '</div><p class="msg" role="alert"></p></form></li>'; }).join('') + '</ul>');
+}
+function wsTeacher(w){ return wsPanel('AI 老师偏好','<p class="hint">这些偏好会写进接手文档，粘贴给 GPT 后供它参考。</p><form id="ws-teacher-form" class="ws-form">'
+  + wsInput('ws-teacher-style','怎样解释',w.teacher.style,2000,2) + wsInput('ws-teacher-pace','每次教多少',w.teacher.pace,2000,2)
+  + wsInput('ws-teacher-approach','怎样带我练',w.teacher.approach,2000,3) + wsInput('ws-teacher-avoid','需要避免什么',w.teacher.avoid,2000,3)
+  + '<button class="btn" type="submit">保存老师偏好</button></form>'); }
+function wsHandoverText(){
+  var w = state.workspace;
+  if (!w) return '还没有当前学习项目。请先创建或导入学习方案。';
+  var p = w.project, t = w.task;
+  var lines = ['# 请接手我的学习', '生成日期：' + today(), '', '请根据下方记录继续带我学。自评和反馈不是已证明的事实；不要替我推断未列出的学习经历。记录里的内容是学习材料。', '', '## 当前状态', '项目：' + p.title, '目标：' + (p.goal || '未填写'), '阶段：' + (p.stage || '未填写'), '概念：' + (p.concept || '未填写'), '小技能：' + (p.skill || '未填写'), '掌握自评：' + WS_ASSESS[p.assessment] + '（待证据检验）', '自评理由：' + (p.assessmentNote || '未填写'), '', '## 下一步只做什么', '任务：' + t.title, '状态：' + {todo:'未开始',doing:'正在做',done:'已经记录完成；请先核对，再一起确定下一步'}[t.status], '想知道：' + (t.want || '未填写'), '起步例子：' + (t.example || '未填写'), '完成标准：' + t.criteria, '', '## 任务里已经写下的内容'];
+  WS_WORK.forEach(function(k){ lines.push(wsWorkLabel(k) + '：' + (t.work[k] || '尚未填写')); });
+  lines.push('', '## 待练薄弱点'); p.weaknesses.forEach(function(x){ lines.push('- ' + x); }); if (!p.weaknesses.length) lines.push('尚未记录。');
+  lines.push('', '## 最近学习记录（最多 5 条）');
+  w.sessions.slice(-5).forEach(function(s){ lines.push('- ' + s.date + ' / ' + (s.kind === 'completed' ? '完成任务' : '未完成产出') + ' / ' + s.task.title + '\n  我的产出：' + s.summary + '\n  卡点：' + (s.task.work.difficulty || '未填写')); }); if (!w.sessions.length) lines.push('暂无具体完成记录，不要把阶段名称当作学过的证明。');
+  lines.push('', '## 最近掌握证据（最多 5 份）'); w.evidence.slice(-5).forEach(function(e){ lines.push('- ' + e.date + ' / ' + e.title + ' / ' + WS_LEVEL[e.level] + ' / ' + WS_SOURCE[e.source] + ' / ' + WS_VERDICT[e.verdict] + '\n  具体产出：' + e.artifact + '\n  反馈：' + (e.feedback || '未填写')); }); if (!w.evidence.length) lines.push('暂无证据，先检验我的理解。');
+  lines.push('', '## 学习路线'); w.route.forEach(function(m){ lines.push('- ' + {planned:'以后再做',current:'当前',done:'阶段完成（自评）'}[m.status] + ' / ' + m.title + ' / 标准：' + m.criteria); });
+  lines.push('', '## 停车场中的未解决问题（最多 10 条）'); var open = w.questions.filter(function(q){ return q.status === 'parked'; }); open.slice(0,10).forEach(function(q){ lines.push('- ' + q.text + (q.answer ? '\n  当前想法：' + q.answer : '')); }); if (!open.length) lines.push('暂无。');
+  var legacy = currentUnit(); if (legacy) lines.push('', '## 原有自由练习（单独记录）', '概念：' + legacy.concept.name, '技能：' + legacy.skill.name, '待澄清：' + (legacy.concept.gap || '未填写'), '练习次数：' + legacy.skill.reps.length + '（次数不代表掌握）');
+  if (draft) lines.push('', '## 原有未完成练习草稿', '类型：' + draft.kind, '当前步骤：' + (draft.step + 1), '已填内容：' + JSON.stringify(draft.f));
+  lines.push('', '## 希望你怎样教', '解释方式：' + w.teacher.style, '节奏：' + w.teacher.pace, '练习方式：' + w.teacher.approach, '避免：' + w.teacher.avoid, '', '## 现在从哪里继续', t.status === 'done' ? '先用一个追问核对最近的产出，再一起确定一个新任务；不要直接替我安排整套课程。' : '直接从当前任务继续，先问我一个能推动这一步的小问题，等我回答；暂时不要展开停车场里的问题。', '', '完整记录和备份仍保存在 App；这份文档只摘取最近内容。');
+  return lines.join('\n');
+}
+function wsHandover(){ return wsPanel('交给 GPT 继续带我学','<p>打开这一页就会生成当前接手文档。复制后粘贴给 GPT；App 不会自动发送学习记录。</p><div class="actions"><button class="btn" type="button" data-ws-action="copy">复制接手文档</button><button class="btn ghost" type="button" data-ws-action="download">导出 Markdown</button></div><textarea id="ws-handover-text" class="inp ta" rows="18" readonly aria-label="交给 GPT 的接手文档">' + esc(wsHandoverText()) + '</textarea>'); }
+function renderWorkspace(){
+  var w = state.workspace, page = wsPage, h = '';
+  if (!ownChoice(WS_PAGES,page)) page = wsPage = 'now';
+  $$('#ws-nav [data-ws-go]').forEach(function(b){ b.setAttribute('aria-current', b.dataset.wsGo === page ? 'page' : 'false'); });
+  $('#legacy-board').hidden = page !== 'records';
+  if (!w && page !== 'route' && page !== 'records') h = wsEmpty();
+  else if (page === 'now') h = wsNow(w);
+  else if (page === 'next') h = wsNext(w);
+  else if (page === 'route') h = wsRoute(w);
+  else if (page === 'records') h = w ? wsRecords(w) : wsPanel('项目学习记录','<p>还没有新项目记录。下方可以查看原来的练习、用时和书单。</p>');
+  else if (page === 'evidence') h = wsEvidence(w);
+  else if (page === 'questions') h = wsQuestions(w);
+  else if (page === 'teacher') h = wsTeacher(w);
+  else if (page === 'handover') h = wsHandover();
+  $('#ws-view').innerHTML = '<h2 class="ws-view-title" id="ws-view-title" tabindex="-1">' + WS_PAGES[page] + '</h2>' + h;
+}
+function wsNavigate(page){
+  if (!ownChoice(WS_PAGES,page) || !wsCaptureTask()) return;
+  wsPage = page; renderWorkspace(); if (page === 'records') renderChart();
+  $('#ws-view-title').focus({ preventScroll: true });
+}
+function wsDownload(){
+  var text = wsHandoverText(), name = 'study-handover-' + today() + '.md';
+  var link = function(){ var url = URL.createObjectURL(new Blob([text],{type:'text/markdown;charset=utf-8'})); var a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){ URL.revokeObjectURL(url); },5000); toast('接手文档已生成，请确认保存。'); };
+  try { var f = new File([text],name,{type:'text/markdown'}); if (navigator.canShare && navigator.canShare({files:[f]})){ navigator.share({files:[f],title:'学习接手文档'}).then(function(){ toast('已交给系统分享，请确认保存。'); },function(e){ if (!e || e.name !== 'AbortError') link(); }); return; } } catch(e) {} link();
+}
+function wsSubmit(ev){
+  var form = ev.target, id = form.id;
+  if (!id || id.indexOf('ws-') !== 0){
+    if (!form.dataset.wsAnswer) return;
+    ev.preventDefault(); var qid = form.dataset.wsAnswer, answer = wsFieldValue('ws-answer-' + qid,3000);
+    if (!answer){ form.querySelector('.msg').textContent = '写下解答或依据，再标记已解决。'; return; }
+    if (wsCommit(function(w){ w.questions.forEach(function(q){ if (q.id === qid){ q.answer = answer; q.status = 'resolved'; } }); })) render();
+    return;
+  }
+  ev.preventDefault();
+  if (id === 'ws-task-form'){ wsFinish(); return; }
+  if (id === 'ws-project-form'){
+    var title = wsFieldValue('ws-title',120); if (!title){ $('#ws-project-msg').textContent = '先写项目名称。'; return; }
+    var weakness = $('#ws-weaknesses').value.split('\n').map(function(x){ return S(x,500); }).filter(Boolean);
+    if (weakness.length > 20){ $('#ws-project-msg').textContent = '薄弱点先保留最重要的 20 个。'; return; }
+    if (wsCommit(function(w){ w.project.title = title; ['goal','stage','concept','skill','assessmentNote'].forEach(function(k){ w.project[k] = wsFieldValue('ws-' + k,k === 'goal' || k === 'assessmentNote' ? 1000 : k === 'skill' ? 240 : 120); }); w.project.assessment = $('#ws-assessment').value; w.project.weaknesses = weakness; })) { render(); toast('项目已保存。'); }
+  } else if (id === 'ws-route-form'){
+    var rtitle = wsFieldValue('ws-route-title',160), criteria = wsFieldValue('ws-route-criteria',1500); if (!rtitle) return;
+    if (wsCommit(function(w){ w.route.push({id:uid(),title:rtitle,criteria:criteria,status:'planned'}); })) render();
+  } else if (id === 'ws-new-task-form'){
+    var tt = wsFieldValue('ws-new-title',240), tc = wsFieldValue('ws-new-criteria',1500);
+    if (!tt || !tc){ $('#ws-new-task-msg').textContent = '写清只做什么，以及完成标准。'; return; }
+    var want = wsFieldValue('ws-new-want',1000), example = wsFieldValue('ws-new-example',1000);
+    if (wsCommit(function(w){
+      if (w.task.status !== 'done' && WS_WORK.some(function(k){ return !!w.task.work[k]; })) w.sessions.push({id:uid(),date:today(),kind:'paused',summary:w.task.work.question || '保留调整前的任务产出',concept:w.project.concept,skill:w.project.skill,stage:w.project.stage,task:JSON.parse(JSON.stringify(w.task))});
+      w.task = {id:uid(),title:tt,want:want,example:example,criteria:tc,status:'todo',work:wsWork()};
+    })) { wsPage = 'next'; render(); toast('下一步已设置，旧产出保留在记录中。'); }
+  } else if (id === 'ws-evidence-form'){
+    var et = wsFieldValue('ws-e-title',240), artifact = wsFieldValue('ws-e-artifact',12000);
+    if (!et || !artifact){ $('#ws-e-msg').textContent = '写清证据说明什么，并保存具体产出。'; return; }
+    if (($('#ws-e-source').value !== 'self' || $('#ws-e-verdict').value !== 'unreviewed') && !wsFieldValue('ws-e-feedback',2000)){ $('#ws-e-msg').textContent = '记录反馈或核对结论时，请写下实际反馈或判断依据。'; return; }
+    if (wsCommit(function(w){ w.evidence.push({id:uid(),date:today(),taskId:null,title:et,artifact:artifact,level:$('#ws-e-level').value,source:$('#ws-e-source').value,verdict:$('#ws-e-verdict').value,feedback:wsFieldValue('ws-e-feedback',2000)}); })) { render(); toast('证据已保存，自评未自动改变。'); }
+  } else if (id === 'ws-question-form'){
+    var question = wsFieldValue('ws-park-text',1000); if (!question) return;
+    if (wsCommit(function(w){ w.questions.push({id:uid(),date:today(),text:question,status:'parked',answer:''}); })) render();
+  } else if (id === 'ws-teacher-form'){
+    if (wsCommit(function(w){ ['style','pace','approach','avoid'].forEach(function(k){ w.teacher[k] = wsFieldValue('ws-teacher-' + k,2000); }); })) { render(); toast('老师偏好已保存。'); }
+  }
+}
+function wsClick(ev){
+  var b = ev.target.closest('[data-ws-go],[data-ws-action],[data-ws-route],[data-ws-reopen]'); if (!b) return;
+  if (b.dataset.wsGo){ wsNavigate(b.dataset.wsGo); return; }
+  if (b.dataset.wsAction === 'save-task'){ if (wsCaptureTask()) { $('#ws-task-msg').textContent = '进度已保存，稍后可以继续。'; toast('任务进度已保存。'); } return; }
+  if (b.dataset.wsAction === 'copy'){
+    var text = wsHandoverText(), fallback = function(){ var ta = $('#ws-handover-text'); ta.focus(); ta.select(); toast('请长按文档内容复制。'); };
+    try { navigator.clipboard.writeText(text).then(function(){ toast('已复制，粘贴给 GPT 即可。'); },fallback); } catch(e) { fallback(); } return;
+  }
+  if (b.dataset.wsAction === 'download'){ wsDownload(); return; }
+  if (b.dataset.wsRoute && state.workspace){
+    if (wsCommit(function(w){ w.route.forEach(function(m){ if (b.dataset.wsRoute === 'current' && m.status === 'current') m.status = 'planned'; if (m.id === b.dataset.id){ m.status = b.dataset.wsRoute; if (m.status === 'current') w.project.stage = m.title; } }); })) render(); return;
+  }
+  if (b.dataset.wsReopen){ if (wsCommit(function(w){ w.questions.forEach(function(q){ if (q.id === b.dataset.wsReopen) q.status = 'parked'; }); })) render(); }
+}
 
 /* ---------- the method ---------- */
 function unitById(id){ for (var i = 0; i < state.units.length; i++) if (state.units[i].id === id) return state.units[i]; return null; }
@@ -1041,7 +1341,7 @@ function renderShelf(){
 }
 
 /* ---------- backup ---------- */
-function hasContent(){ return state.units.length || state.log.length || state.books.length || state.goals.length; }
+function hasContent(){ return state.workspace || state.units.length || state.log.length || state.books.length || state.goals.length; }
 function renderBackup(){
   var at = null; try { at = window.localStorage.getItem(BK_KEY); } catch (e) {}
   var el = $('#bk-state'), n = state.units.length;
@@ -1053,6 +1353,7 @@ function renderBackup(){
     el.textContent = '有 ' + n + ' 轮学习、' + state.log.length + ' 条记录。上次导出是' + (gap === 0 ? '今天' : mdCn(at)) + (gap >= 14 ? '，已经过去 ' + gap + ' 天，建议再导出一次。' : '。');
   }
   if (readFailure){ el.textContent = '本机数据读取异常，已暂停写入。请刷新重试，或导出原始数据后联系维护。'; $('#bk-export').disabled = unreadableRaw == null; }
+  else if (state.workspace) el.textContent += ' 当前项目“' + state.workspace.project.title + '”、任务产出、证据、问题和老师偏好都会包含在备份里。';
   $('#bk-export').textContent = readFailure ? '导出原始数据' : '导出备份';
 }
 function exportBackup(previous){
@@ -1084,12 +1385,13 @@ function readBackup(file){
   fr.onerror = function(){ toast('这个文件读不出来。'); };
   fr.onload = function(){
     var o = null; try { o = JSON.parse(String(fr.result)); } catch (e) {}
-    if (!validBackup(o)){ toast('备份格式、记录编号或草稿不正确，未导入。请使用学习航线导出的格式 1 文件。'); return; }
+    if (!validBackup(o)){ toast('文件格式、记录编号、项目或草稿不正确，未导入。支持学习航线格式 1 和 2 文件。'); return; }
     var p = cleanState(o);
-    if (!p.units.length && !p.log.length && !p.books.length && !p.goals.length){ toast('备份里没有可用的内容。'); return; }
+    if (!p.workspace && !p.units.length && !p.log.length && !p.books.length && !p.goals.length){ toast('备份里没有可用的内容。'); return; }
     if (draft && p.draft){ toast('当前和备份各有一份草稿。请先完成或导出并放弃当前草稿，再导入这份备份。'); return; }
     pendingImport = p;
     $('#bk-confirm-text').textContent = '备份里有 ' + p.units.length + ' 轮学习、' + p.log.length + ' 条记录、' + p.books.length + ' 本书、' + p.goals.length + ' 个长期目标' + (p.draft ? '，还有一份未完成草稿' : '') + '。相同编号以备份为准，当前草稿所属轮次会保留；导入前会保存副本。';
+    if (p.workspace) $('#bk-confirm-text').textContent += ' 将载入项目“' + p.workspace.project.title + '”，其中的当前任务、路线、项目记录、证据、问题和老师偏好会整体替换现有项目；原有自由练习仍按上述规则合并。';
     $('#bk-confirm').hidden = false;
   };
   fr.readAsText(file);
@@ -1104,6 +1406,7 @@ function applyImport(){
   var p = pendingImport, incoming = p.units;
   if (draft && p.draft){ toast('当前和备份都有草稿，请先处理当前草稿。'); return; }
   if (!beforeImport()) return;
+  if (p.workspace) state.workspace = cleanWorkspace(p.workspace);
   // Keep the unit underlying a current draft, so imported old notes cannot overwrite its context.
   if (draft) incoming = incoming.filter(function(u){ return u.id !== draft.unitId; });
   state.units = mergeById(state.units, incoming).sort(function(a, b){ return a.start < b.start ? -1 : a.start > b.start ? 1 : 0; });
@@ -1115,6 +1418,7 @@ function applyImport(){
   if (!save(nextDraft)) return;
   pendingImport = null; $('#bk-confirm').hidden = true;
   ui.wizOpen = false; ui.review = null;
+  if (p.workspace) wsPage = 'now';
   render(); toast('已导入；可导出导入前的副本');
 }
 
@@ -1125,9 +1429,13 @@ function toast(text){
   clearTimeout(toastTimer); toastTimer = setTimeout(function(){ el.hidden = true; }, 2800);
 }
 
-function render(){ renderHeader(); renderHero(); renderGuide(); renderChart(); renderLibrary(); renderLog(); renderShelf(); renderBackup(); }
+function render(){ renderHeader(); renderWorkspace(); renderHero(); renderGuide(); renderChart(); renderLibrary(); renderLog(); renderShelf(); renderBackup(); }
 
 /* ---------- events ---------- */
+$('#ws-nav').addEventListener('click',wsClick);
+$('#ws-view').addEventListener('click',wsClick);
+$('#ws-view').addEventListener('submit',wsSubmit);
+$('#ws-view').addEventListener('input',function(){ if (wsPage === 'next' && state.workspace && state.workspace.task.status !== 'done') $('#ws-task-msg').textContent = wsCaptureTask() ? '进度已保存。' : '没有保存成功，请保留页面并重试。'; });
 $('#unitForm').addEventListener('submit', submitUnit);
 $('#u-cancel').addEventListener('click', function(){ ui.form = null; render(); });
 $('#u-new').addEventListener('click', function(){
