@@ -44,26 +44,40 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return;
   if (!url.pathname.startsWith(HOME) || url.pathname.slice(HOME.length).includes('/')) return;
 
-  event.respondWith(new Promise((resolve, reject) => {
-    let settled = false;
-    const finish = (response) => { if (!settled && response) { settled = true; resolve(response); } };
-
-    // a slow connection should not leave the app blank: after a short wait, show the saved copy
-    const timer = setTimeout(() => { fromCache(request).then(finish); }, WAIT_MS);
-
-    fetch(request, { cache: 'no-cache' }).then((response) => {
-      clearTimeout(timer);
-      if (response && response.ok) {
-        const copy = response.clone();
-        caches.open(CACHE).then((c) => c.put(request, copy));
-      }
+  let finish;
+  let fail;
+  let settled = false;
+  const responsePromise = new Promise((resolve, reject) => {
+    finish = (response) => { if (!settled && response) { settled = true; resolve(response); } };
+    fail = () => { if (!settled) { settled = true; reject(new TypeError('offline and not cached')); } };
+  });
+  const cached = () => fromCache(request).catch(() => undefined);
+  const timer = setTimeout(() => { cached().then(finish); }, WAIT_MS);
+  const work = fetch(request, { cache: 'no-cache' }).then(async (response) => {
+    clearTimeout(timer);
+    if (response.ok) {
+      const copy = response.clone();
+      const homeCopy = response.clone(), indexCopy = response.clone();
       finish(response);
-    }).catch(() => {
-      clearTimeout(timer);
-      fromCache(request).then((hit) => {
-        if (hit) finish(hit);
-        else if (!settled) { settled = true; reject(new TypeError('offline and not cached')); }
-      });
-    });
-  }));
+      try {
+        const cache = await caches.open(CACHE);
+        await cache.put(request, copy);
+        // Keep both entry URLs at the same version when a document is fetched.
+        if (request.mode === 'navigate' && (url.pathname === HOME || url.pathname === HOME + 'index.html')) {
+          await cache.put(new URL('./', self.location.href).href, homeCopy);
+          await cache.put(new URL('./index.html', self.location.href).href, indexCopy);
+        }
+      } catch (e) { /* A failed cache write must not hide a valid network response. */ }
+      return;
+    }
+    if (request.mode === 'navigate' && (response.status >= 500 || [404, 408, 429].includes(response.status))) {
+      finish(await cached() || response);
+    } else finish(response);
+  }).catch(async () => {
+    clearTimeout(timer);
+    const hit = await cached();
+    if (hit) finish(hit); else fail();
+  });
+  event.respondWith(responsePromise);
+  event.waitUntil(work);
 });
