@@ -1,4 +1,4 @@
-/* 学习航线 1.1.0 service worker
+/* 学习航线 1.2.0 service worker
    Online: always ask the network first, so a new version shows up the next time the app opens.
    Offline or slow network: fall back to the copy saved on this device. */
 const PREFIX = 'study-route-shell-';
