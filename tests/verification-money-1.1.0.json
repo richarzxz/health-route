@@ -175,7 +175,7 @@
       "pass": true
     },
     {
-      "name": "AI handoff has modes, quote provenance, unknown values, versions and no fake history",
+      "name": "AI handoff has units, modes, quote provenance, unknown values and no fake history",
       "pass": true
     },
     {
