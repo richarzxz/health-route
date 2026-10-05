@@ -2,10 +2,14 @@
    Online: always ask the network first, so a new version shows up the next time the app opens.
    Offline or slow network: fall back to the copy saved on this device. */
 const PREFIX = 'money-route-shell-';
-const CACHE = PREFIX + 'v1';
+const CACHE = PREFIX + 'v1.1.0';
 const SHELL = [
   './',
   './index.html',
+  './practice.html',
+  './practice.css',
+  './practice-core.js',
+  './practice-ui.js',
   './manifest.webmanifest',
   './icon-180.png',
   './icon-192.png',
