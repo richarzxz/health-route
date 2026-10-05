@@ -4,9 +4,12 @@
 
 ```sh
 node tests/regression.cjs
+node tests/practice.cjs
 ```
 
 不需要 npm 安装依赖，也不是网页运行所需步骤。
+
+理财1.1.0新增交易练习50项检查：定点价格/费用、官方日历、T+1、委托冻结、部分成交撤单、含费损益、重复成交、快照/纠错、暂停、新买入门槛、主动实盘、内部划转和UI写入失败/防陈旧覆盖。报告为 `verification-money-1.1.0.json`。与原94项合计144项。所有数据虚构，UI为Node VM替身；真实浏览器页面与上线状态另核对，iPhone/券商/后台通知未由这些测试验证。
 
 测试直接读取三个 HTML 的脚本和三个 Service Worker，以 Node VM 模拟页面元素、localStorage、FileReader 和网络。全部使用虚构数据。
 

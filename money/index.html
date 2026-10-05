@@ -291,6 +291,11 @@ tfoot td.num{color:var(--ink);font-size:14.5px}
     <p class="status" id="status" data-mode="loading">正在读取…</p>
   </header>
 
+  <section class="panel" aria-labelledby="practiceH">
+    <div class="panel-head"><h2 class="h2" id="practiceH">交易练习</h2><a href="practice.html" class="link">进入交易练习 →</a></div>
+    <p class="hint">先准备、再观察、再模拟。每次只做下一步；委托、成交与复盘分开记录。默认模拟，不连接券商、不替你下单，虚拟资金不进入真实资产。</p>
+  </section>
+
   <div class="cols">
     <div class="col">
       <section class="hero" aria-labelledby="heroH">
@@ -403,7 +408,7 @@ tfoot td.num{color:var(--ink);font-size:14.5px}
             <button class="btn ghost" type="button" id="bk-no">取消</button>
           </div>
         </div>
-        <p class="hint">内容只存在这台设备上。换手机或删除这个 app 之前先导出一份。备份里有你的收支数字，不要发到公开的地方。</p>
+        <p class="hint">此备份只包含记账和预算。交易练习请在“设置与备份”单独导出。换手机或删除 App 前两处都要保存；备份有个人数据，不要公开。</p>
       </section>
 
       <p class="foot">版本 <span id="ver"></span></p>
@@ -458,7 +463,7 @@ function plain(c){ return c % 100 ? (c / 100).toFixed(2) : String(c / 100); }
 function intIn(v, lo, hi){ v = Number(v); return Number.isInteger(v) && v >= lo && v <= hi ? v : null; }
 
 /* ---------- state ---------- */
-var APP_VERSION = '1.0.1';
+var APP_VERSION = '1.1.0';
 var LS_KEY = 'money-route.v1', BK_KEY = 'money-route.backupAt';
 var DEFAULT_CATS = [['房租', true], ['吃饭', false], ['交通', false], ['日用', false], ['娱乐', false], ['其他', false]];
 var state = { plans: {}, entries: [] };

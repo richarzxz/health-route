@@ -1,0 +1,210 @@
+{
+  "date": "2026-10-05",
+  "suite": "money 1.1.0 trading practice",
+  "scope": "Synthetic core + Node VM DOM/storage. Not real browser, iPhone, broker or notifications.",
+  "total": 50,
+  "passed": 50,
+  "failed": [],
+  "checks": [
+    {
+      "name": "initial state has no trades, completed tasks, evidence or measured profit",
+      "pass": true
+    },
+    {
+      "name": "fixed point preserves 0.001 price and 0.01 fee without rounding price first",
+      "pass": true
+    },
+    {
+      "name": "verified calendar excludes weekends, adjustment workdays and holidays",
+      "pass": true
+    },
+    {
+      "name": "unknown future calendar does not pretend to know T+1 or observation days",
+      "pass": true
+    },
+    {
+      "name": "ten day sequence is generated from calendar, not hardcoded weekend dates",
+      "pass": true
+    },
+    {
+      "name": "observation needs actual day, source, time and fact/guess/check fields",
+      "pass": true
+    },
+    {
+      "name": "future observation/quote and future plans are rejected",
+      "pass": true
+    },
+    {
+      "name": "read explanations or mark task complete does not create preparation/observation/independence",
+      "pass": true
+    },
+    {
+      "name": "same observation date rejects duplicates but audit correction counts once",
+      "pass": true
+    },
+    {
+      "name": "one observation is insufficient to register buy order",
+      "pass": true
+    },
+    {
+      "name": "unsupported platform permits explicit manual simulation, not invented support",
+      "pass": true
+    },
+    {
+      "name": "10 CNY times 100 plus 5 fee cannot become executable under 1000 budget",
+      "pass": true
+    },
+    {
+      "name": "submission freezes cash only, does not create position or measured profit",
+      "pass": true
+    },
+    {
+      "name": "partial fill and cancellation retain shares and release only unused reservation",
+      "pass": true
+    },
+    {
+      "name": "late backfill before cancellation is allowed and not treated as new order",
+      "pass": true
+    },
+    {
+      "name": "T+1 has total 100 and sellable 0 on entry day, 100 next trading day",
+      "pass": true
+    },
+    {
+      "name": "Friday entry not sellable on weekend, sellable Monday",
+      "pass": true
+    },
+    {
+      "name": "1000 / 4x100 / fees5+5 / sell 3900 returns exact -2000 cents",
+      "pass": true
+    },
+    {
+      "name": "1000 / 4x100 / fees5+5 / sell 4160 returns exact 600 cents",
+      "pass": true
+    },
+    {
+      "name": "1000 / 4x100 / fees5+5 / sell 3880 returns exact -2200 cents",
+      "pass": true
+    },
+    {
+      "name": "buy fees not deducted twice in equity or liquidation estimate",
+      "pass": true
+    },
+    {
+      "name": "sell submission does not erase position; partial sale proportional cost and remaining shares",
+      "pass": true
+    },
+    {
+      "name": "two pending sell orders cannot reserve same shares twice",
+      "pass": true
+    },
+    {
+      "name": "unknown fill fees are explicitly estimated from snapshot; unknown model has unknown profit",
+      "pass": true
+    },
+    {
+      "name": "confirmed zero fees are not replaced with 5 yuan",
+      "pass": true
+    },
+    {
+      "name": "duplicate external fill references and overfills reject without mutating original",
+      "pass": true
+    },
+    {
+      "name": "plan revision keeps original and reason, active plans cannot be silently rewritten",
+      "pass": true
+    },
+    {
+      "name": "settings new version affects new plans only, existing fee snapshot stays unchanged",
+      "pass": true
+    },
+    {
+      "name": "position forbids second buy and averaging down",
+      "pass": true
+    },
+    {
+      "name": "closed trade prioritizes review, even if profitable; new buy waits",
+      "pass": true
+    },
+    {
+      "name": "two completed rounds cap is an upper limit, not a mandatory metric",
+      "pass": true
+    },
+    {
+      "name": "50 loss pause is sticky after recovery, permits exits and recording/review",
+      "pass": true
+    },
+    {
+      "name": "manual pause blocks new buying but does not block existing sell/cancel/fill/review",
+      "pass": true
+    },
+    {
+      "name": "holding day 5 is based on actual entry day, not route D7 or D10 deadline",
+      "pass": true
+    },
+    {
+      "name": "correction retains original fill and makes prior review require rechecking",
+      "pass": true
+    },
+    {
+      "name": "invalid correction cannot oversell or rewrite a buy date past a sell",
+      "pass": true
+    },
+    {
+      "name": "full backup round trip and repeated restoration do not duplicate any fill or versions",
+      "pass": true
+    },
+    {
+      "name": "invalid schema, units, IDs, or relationships reject import instead of dropping data",
+      "pass": true
+    },
+    {
+      "name": "simulation profit or date passage cannot automatically switch to live",
+      "pass": true
+    },
+    {
+      "name": "live requires explicit user choice after complete evidence and fees; defaults stay simulation",
+      "pass": true
+    },
+    {
+      "name": "only one confirmed 1000 internal transfer, never add simulation platform account to real",
+      "pass": true
+    },
+    {
+      "name": "hand manual simulation cannot be disguised as a live plan",
+      "pass": true
+    },
+    {
+      "name": "AI handoff has modes, quote provenance, unknown values, versions and no fake history",
+      "pass": true
+    },
+    {
+      "name": "UI initial page has one current setup action and correct no-result label",
+      "pass": true
+    },
+    {
+      "name": "all five views and secondary settings render without browser/broker APIs",
+      "pass": true
+    },
+    {
+      "name": "UI quota failure preserves old event state; retry stores one event only",
+      "pass": true
+    },
+    {
+      "name": "cross-tab stale state cannot overwrite newer training records",
+      "pass": true
+    },
+    {
+      "name": "corrupt local practice data blocks writes without touching budgets",
+      "pass": true
+    },
+    {
+      "name": "rendered imported text is escaped instead of injected HTML",
+      "pass": true
+    },
+    {
+      "name": "practice shell caches all new runtime files; existing root/index scope logic remains",
+      "pass": true
+    }
+  ]
+}
