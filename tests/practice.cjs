@@ -89,6 +89,7 @@ test('home recovers damaged practice data without overwriting budget or practice
 test('home completed day shows one day and preserves initial 1.1.0 event backup',()=>{let p=add(add(C.initial(),'setup',setup()),'observation',obs('2026-10-08'));const raw=JSON.stringify(p),a=home({[C.KEY]:raw},'2026-10-08T10:00:00Z');assert.match(a.node('#home-now').innerHTML,/今天的观察已保存/);assert.match(a.node('#home-progress-count').textContent,/1 \/ 10/);assert.equal(a.map.get(C.KEY),raw);assert.equal(a.writes(),0);});
 test('home prior review priority is reflected directly in the primary link',()=>{let {p,id}=bought();p=close(p,id);const a=home({[C.KEY]:JSON.stringify(p)},at);assert.match(a.node('#home-now').innerHTML,/practice.html#review/);});
 
+test('first lesson is available without creating setup evidence',()=>{const s=C.replay(C.initial()),g=G.learning(C,s,'2026-10-05');assert.match(g.title,/今天涨了/);assert.equal(s.setup,null);assert.match(G.prompt(C,s,'2026-10-05'),/前收盘4.00/);});
 const report={date:'2026-10-05',suite:'money 1.2.0 guided practice',scope:'Synthetic core + Node VM DOM/storage. Not real browser, iPhone, broker or notifications.',total:outcomes.length,passed:outcomes.filter(x=>x.pass).length,failed:outcomes.filter(x=>!x.pass),checks:outcomes};
 if(process.env.TEST_REPORT)fs.writeFileSync(path.resolve(__dirname,process.env.TEST_REPORT),JSON.stringify(report,null,2)+'\n');
 console.log(JSON.stringify({total:report.total,passed:report.passed,failed:report.failed},null,2));if(report.failed.length)process.exitCode=1;

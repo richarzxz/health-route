@@ -22,6 +22,7 @@ function get(C,s,on){const task=C.nextTask(s,on),n=C.observationCount(s,on),done
  else if(task.page==='route'){out.title='检查证据，选择下一阶段';out.button='核对路线与证据';}
  return out;
 }
-function prompt(C,s,on,answer=''){const g=get(C,s,on);return ['请继续教我这一小步，每次只问一个核心问题，先核对我的回答，不重做整套计划。','当前课题：'+g.title,'我现在的问题：'+g.question,'我尝试的解释：'+(answer||'尚未填写'),'任务完成与独立掌握分开；虚构练习不计观察交易日，不自动增加交易或切实盘。'].concat(['实际观察：'+C.observationCount(s,on)+'个交易日；'+C.stage(s),'下一步只做：'+g.task.text]).join('\n\n');}
-return {LESSONS,get,prompt};
+function learning(C,s,on){const g=get(C,s,on);return s.setup?g:{...g,...LESSONS[0],lesson:1};}
+function prompt(C,s,on,answer=''){const g=learning(C,s,on);return ['请继续教我这一小步，每次只问一个核心问题，先核对我的回答，不重做整套计划。','当前课题：'+g.title,'我现在的问题：'+g.question,'我尝试的解释：'+(answer||'尚未填写'),'任务完成与独立掌握分开；虚构练习不计观察交易日，不自动增加交易或切实盘。'].concat(['实际观察：'+C.observationCount(s,on)+'个交易日；'+C.stage(s),'下一步只做：'+g.task.text]).join('\n\n');}
+return {LESSONS,get,learning,prompt};
 });

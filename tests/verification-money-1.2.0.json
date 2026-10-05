@@ -2,8 +2,8 @@
   "date": "2026-10-05",
   "suite": "money 1.2.0 guided practice",
   "scope": "Synthetic core + Node VM DOM/storage. Not real browser, iPhone, broker or notifications.",
-  "total": 62,
-  "passed": 62,
+  "total": 63,
+  "passed": 63,
   "failed": [],
   "checks": [
     {
@@ -252,6 +252,10 @@
     },
     {
       "name": "home prior review priority is reflected directly in the primary link",
+      "pass": true
+    },
+    {
+      "name": "first lesson is available without creating setup evidence",
       "pass": true
     }
   ]
