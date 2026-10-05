@@ -23,6 +23,9 @@ function get(C,s,on){const task=C.nextTask(s,on),n=C.observationCount(s,on),done
  return out;
 }
 function learning(C,s,on){const g=get(C,s,on);return s.setup?g:{...g,...LESSONS[0],lesson:1};}
-function prompt(C,s,on,answer=''){const g=learning(C,s,on);return ['请继续教我这一小步，每次只问一个核心问题，先核对我的回答，不重做整套计划。','当前课题：'+g.title,'我现在的问题：'+g.question,'我尝试的解释：'+(answer||'尚未填写'),'任务完成与独立掌握分开；虚构练习不计观察交易日，不自动增加交易或切实盘。'].concat(['实际观察：'+C.observationCount(s,on)+'个交易日；'+C.stage(s),'下一步只做：'+g.task.text]).join('\n\n');}
+function prompt(C,s,on,answer=''){
+ const g=learning(C,s,on),priority=['trades','review'].includes(g.task.page);
+ return ['请继续教我这一小步，每次只问一个核心问题，先核对我的回答，不重做整套计划。','当前课题：'+g.title,'我现在的问题：'+g.question,'我尝试的解释：'+(answer||'尚未填写'),'本次下一步只做：'+(priority?g.task.text:'核对我对当前问题的解释；有误就用一个新例子再练。'),'交易流程待办（背景）：'+g.task.text,priority?'已有持仓、委托、暂停或待复盘事项优先核对。':'以下完整账本中的“下一步”是交易流程待办，不应打断当前概念练习；准备工具可在这次解释结束后处理。','实际观察：'+C.observationCount(s,on)+'个交易日；'+C.stage(s),'任务完成与独立掌握分开；虚构练习不计观察交易日，不自动增加交易或切实盘。'].join('\n\n');
+}
 return {LESSONS,get,learning,prompt};
 });
