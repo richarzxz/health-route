@@ -225,7 +225,7 @@ function lvl(n){ return n == null ? '—' : n.toLocaleString('zh-CN', { minimumF
 function cls(c){ return c > 0 ? 'up' : c < 0 ? 'down' : ''; }
 
 /* ---------- state ---------- */
-var APP_VERSION = '1.0.0';
+var APP_VERSION = '1.1.0';
 var LS_KEY = 'invest-book.v1', BK_KEY = 'invest-book.backupAt';
 var INDEX = { ndx: '纳斯达克100', spx: '标普500' };
 /* an example only: the owner sets their own rule in 设置 */
@@ -240,7 +240,7 @@ function blank(){
   };
 }
 var state = blank();
-var ui = { tab: 'today', editFund: null, addFund: false, editValue: null, confirmDel: null, showAll: false, manual: false, confirmUndo: false, confirmDelFund: false };
+var ui = { tab: 'today', snap: null, pasteBox: false, howto: false, editFund: null, addFund: false, editValue: null, confirmDel: null, showAll: false, manual: false, confirmUndo: false, confirmDelFund: false };
 var pending = null;
 
 function cleanIndex(x){
@@ -265,7 +265,9 @@ function cleanFund(f){
     index: INDEX[f.index] ? f.index : 'none',
     scale: !!f.scale && !!INDEX[f.index],
     base: n(f.base), limit: n(f.limit), prior: n(f.prior) || 0,
-    value: n(f.value), valueDate: n(f.value) != null && validDate(f.valueDate) ? f.valueDate : null
+    value: n(f.value), valueDate: n(f.value) != null && validDate(f.valueDate) ? f.valueDate : null,
+    /* cost as the fund platform reports it (资产 − 持仓收益), taken from a screenshot at snapTs */
+    cost: n(f.value) != null ? n(f.cost) : null, snapTs: Number.isFinite(f.snapTs) ? f.snapTs : 0
   };
 }
 function cleanEntry(e){
@@ -331,8 +333,12 @@ function cashLeft(){
   return state.cash.balance - used;
 }
 function investedFor(f, upto){
+  /* after a screenshot, the platform's cost is the base; only purchases logged after it are added */
+  if (f.cost != null && !upto) return f.cost + state.entries.reduce(function(a, e){ return e.fund === f.id && e.ts > f.snapTs && e.date >= f.valueDate ? a + e.amt : a; }, 0);
   return f.prior + state.entries.reduce(function(a, e){ return e.fund === f.id && (!upto || e.date <= upto) ? a + e.amt : a; }, 0);
 }
+function baseOf(f){ return f.cost != null ? f.cost : investedFor(f, f.valueDate); }
+function gainOf(f){ return f.value == null ? null : f.value - baseOf(f); }
 
 /* ---------- header ---------- */
 function renderHeader(){
@@ -408,7 +414,7 @@ function viewOver(){
   var invested = funds.reduce(function(a, f){ return a + investedFor(f); }, 0);
   var withV = funds.filter(function(f){ return f.value != null; });
   var value = withV.reduce(function(a, f){ return a + f.value; }, 0);
-  var base = withV.reduce(function(a, f){ return a + investedFor(f, f.valueDate); }, 0);
+  var base = withV.reduce(function(a, f){ return a + baseOf(f); }, 0);
   var gain = value - base, rate = base > 0 ? gain / base : 0;
   var oldest = withV.map(function(f){ return f.valueDate; }).sort()[0];
   var ws = weekStart(t), ms = t.slice(0, 8) + '01', ys = t.slice(0, 5) + '01-01';
@@ -416,15 +422,15 @@ function viewOver(){
   var dates = {}; state.entries.forEach(function(e){ dates[e.date] = true; });
   var dlist = Object.keys(dates).sort(), first = dlist[0];
 
-  var h = '<div class="tiles">';
+  var h = snapCard() + '<div class="tiles">';
   if (withV.length){
     h += '<div class="tile wide"><span class="k">当前市值</span><span class="v num">' + fmt(value, { big: true }) + '</span><span class="s">' + (withV.length < funds.length ? funds.length - withV.length + ' 只基金还没填市值，没算在内 · ' : '') + '最早一只更新于 ' + mdCn(oldest) + '</span></div>'
-      + '<div class="tile"><span class="k">收益</span><span class="v num ' + cls(gain) + '">' + fmt(gain, { sign: true, big: true }) + '</span><span class="s">市值减去对应的投入</span></div>'
+      + '<div class="tile"><span class="k">收益</span><span class="v num ' + cls(gain) + '">' + fmt(gain, { sign: true, big: true }) + '</span><span class="s">' + (withV.some(function(f){ return f.cost != null; }) ? '截图里的持仓收益' : '市值减去对应的投入') + '</span></div>'
       + '<div class="tile"><span class="k">收益率</span><span class="v num ' + cls(gain) + '">' + pct(rate) + '</span><span class="s">没有年化</span></div>';
   } else {
     h += '<div class="tile wide"><span class="k">当前市值</span><span class="v" style="font-size:18px;font-weight:600">还没填</span><span class="s">在下面的基金表里点“市值”，填基金 app 里显示的持有金额</span></div>';
   }
-  h += '<div class="tile"><span class="k">累计投入</span><span class="v num">' + fmt(invested, { big: true }) + '</span><span class="s">含开始前已投的本金</span></div>'
+  h += '<div class="tile"><span class="k">累计投入</span><span class="v num">' + fmt(invested, { big: true }) + '</span><span class="s">' + (funds.some(function(f){ return f.cost != null; }) ? '截图里的持仓成本，加上之后记的' : '含开始前已投的本金') + '</span></div>'
     + '<div class="tile"><span class="k">今年投入</span><span class="v num">' + fmt(sumFrom(ys), { big: true }) + '</span><span class="s">本月 ' + fmt(sumFrom(ms), { big: true }) + ' · 本周 ' + fmt(sumFrom(ws), { big: true }) + '</span></div>'
     + '</div>';
 
@@ -442,13 +448,15 @@ function viewOver(){
   else {
     h += '<div class="tablewrap"><table><thead><tr><th>基金</th><th class="r">投入</th><th class="r">市值</th><th class="r">收益</th></tr></thead><tbody>';
     funds.forEach(function(f){
-      var inv = investedFor(f), g = f.value != null ? f.value - investedFor(f, f.valueDate) : null;
+      var inv = investedFor(f), g = gainOf(f);
       h += '<tr class="fundrow"><td>' + esc(f.name) + '</td><td class="r n">' + fmt(inv, { big: true }) + '</td><td class="r n"><button class="link" type="button" data-act="value" data-id="' + f.id + '">' + (f.value != null ? fmt(f.value, { big: true }) : '填市值') + '</button></td><td class="r n ' + (g == null ? '' : cls(g)) + '">' + (g == null ? '—' : fmt(g, { sign: true, big: true })) + '</td></tr>';
       if (ui.editValue === f.id){
-        h += '<tr><td colspan="4"><form class="inline" data-form="value" data-id="' + f.id + '" novalidate><div class="field"><label for="v-amt">' + esc(f.name) + '现在的持有金额</label><div class="unit"><span>¥</span><input class="inp" type="text" inputmode="decimal" id="v-amt" value="' + plain(f.value) + '" placeholder="基金 app 里显示的金额"></div></div><p class="hint">按今天 ' + mdCn(t) + ' 记。收益会和今天及以前的投入比较。</p><p class="msg" id="v-msg"></p><div class="actions"><button class="btn small" type="submit">保存</button><button class="btn ghost small" type="button" data-act="cancel-value">取消</button></div></form></td></tr>';
+        h += '<tr><td colspan="4"><form class="inline" data-form="value" data-id="' + f.id + '" novalidate><div class="field"><label for="v-amt">' + esc(f.name) + '现在的持有金额</label><div class="unit"><span>¥</span><input class="inp" type="text" inputmode="decimal" id="v-amt" value="' + plain(f.value) + '" placeholder="基金 app 里显示的金额"></div></div><p class="hint">按今天 ' + mdCn(t) + ' 记。' + (f.cost != null ? '持仓成本会按截图之后记的定投顺延。' : '收益会和今天及以前的投入比较。') + '</p><p class="msg" id="v-msg"></p><div class="actions"><button class="btn small" type="submit">保存</button><button class="btn ghost small" type="button" data-act="cancel-value">取消</button></div></form></td></tr>';
       }
     });
     h += '</tbody></table></div>';
+    if (withV.some(function(f){ return investedFor(f) !== baseOf(f); }))
+      h += '<p class="hint">“投入”含市值更新之后才记的买入；市值和收益还是更新那天的，下次更新后就对上了。</p>';
   }
   h += '</section>';
 
@@ -475,6 +483,176 @@ function viewOver(){
   return h + '</section>';
 }
 
+
+/* ---------- screenshot text → holdings ---------- */
+/* The text comes from iPhone Live Text (实况文本). Labels and numbers may arrive label-number-label-number,
+   or as a row of labels followed by a row of numbers; each number goes to the oldest waiting label of its kind. */
+var LABELS = [
+  ['资产详情', 'skip'], ['持仓成本单价', 'n4'], ['持仓收益率', 'rate'], ['持有收益率', 'rate'], ['持仓收益', 'gain'], ['持有收益', 'gain'],
+  ['基金资产', 'value'], ['持有资产', 'value'], ['持有金额', 'value'], ['资产总额', 'value'], ['总资产', 'value'], ['资产', 'value'], ['市值', 'value'],
+  ['昨日收益', 'money'], ['日收益', 'money'], ['昨日', 'money'], ['累计收益', 'money'], ['持仓成本', 'money'], ['平均成本', 'n4'],
+  ['最新净值', 'n4'], ['单位净值', 'n4'], ['日涨幅', 'pct'], ['全部份额', 'share'], ['可用份额', 'share'], ['持有份额', 'share']
+];
+var ACCEPT = { value: { M: 1 }, gain: { M: 1 }, money: { M: 1 }, rate: { P: 1 }, pct: { P: 1 }, n4: { N4: 1 }, share: { S: 1, M: 1 }, skip: {} };
+var NUM_RE = '[+-]?(?:\\d{1,3}(?:,\\d{3})+|\\d+)(?:\\.\\d+)?(?:\\s*(?:%|份))?';
+var TOKEN_RE = new RegExp('(' + LABELS.map(function(l){ return l[0]; }).sort(function(a, b){ return b.length - a.length; }).join('|') + ')|(' + NUM_RE + ')|((?:^|\\s)-{2,}(?=\\s|$))', 'g');
+function normOcr(s){
+  return String(s || '').replace(/[０-９]/g, function(d){ return String.fromCharCode(d.charCodeAt(0) - 0xFEE0); })
+    .replace(/（/g, '(').replace(/）/g, ')').replace(/％/g, '%').replace(/＋/g, '+').replace(/[−–—－]/g, '-')
+    .replace(/(\d)，(\d{3})/g, '$1,$2').replace(/：/g, ':').replace(/ /g, ' ')
+    .replace(/(^|\s)([+-])\s+(?=\d)/gm, '$1$2');
+}
+function numClass(tok){
+  if (/%$/.test(tok)) return 'P';
+  if (/份$/.test(tok)) return 'S';
+  var m = tok.match(/\.(\d+)/), d = m ? m[1].length : 0;
+  return d === 2 ? 'M' : d >= 3 ? 'N4' : 'I';
+}
+function numCents(tok){ var v = parseFloat(tok.replace(/[,\s%份+]/g, '')); return isFinite(v) ? Math.round(v * 100) : null; }
+function isNameLine(l){
+  var x = l.replace(/\s/g, '');
+  return x.length >= 6 && x.length <= 40 && /[一-龥]{2}/.test(x) && /(纳斯达克|纳指|标普|沪深300|中证|恒生|QDII|ETF|联接)/.test(x)
+    && !/[:%|｜]/.test(x) && !/(关联|业绩|基准|同类|自选|走势|收益|计算|方案)/.test(x);
+}
+function indexOfName(n){ return /纳斯达克|纳指/.test(n) ? 'ndx' : /标普/.test(n) ? 'spx' : 'none'; }
+function nameKey(n){ return n.replace(/\(.*?\)/g, '').replace(/[^一-龥A-Za-z0-9]/g, ''); }
+function shareClass(n){ var m = n.replace(/\s/g, '').match(/([A-EI])类?$/); return m ? m[1] : ''; }
+function matchFund(name){
+  var best = null, bs = 0, b = nameKey(name);
+  state.funds.forEach(function(f){
+    var a = nameKey(f.name), sc = 0;
+    if (a === b) sc += 5;
+    if (a.slice(0, 2) === b.slice(0, 2)) sc += 2;
+    if (f.index !== 'none' && f.index === indexOfName(name)) sc += 2;
+    if (shareClass(f.name) && shareClass(f.name) === shareClass(name)) sc += 1;
+    if (sc > bs){ bs = sc; best = f; }
+  });
+  return bs >= 4 ? best : null;
+}
+/* rate shown by the platform vs. gain ÷ (资产 − 持仓收益); platforms round and some use their own base, so only roughly */
+function consistent(r){
+  if (r.value == null || r.value <= 0 || r.gain == null || r.rate == null) return false;
+  var cost = r.value - r.gain; if (cost <= 0) return false;
+  var exp = r.gain / cost * 100;
+  if (Math.abs(exp) < 0.015 || Math.abs(r.rate) < 0.015) return Math.abs(exp - r.rate) < 0.015;
+  var q = r.rate / exp; return q >= 0.5 && q <= 2;
+}
+function tokenize(lines){
+  var out = [];
+  lines.forEach(function(line){
+    var m; TOKEN_RE.lastIndex = 0;
+    while ((m = TOKEN_RE.exec(line))){
+      if (m[1]){ for (var i = 0; i < LABELS.length; i++) if (LABELS[i][0] === m[1]){ out.push({ label: LABELS[i][1] }); break; } }
+      else if (m[3]) out.push({ cls: 'X' });
+      else { var tok = m[2].trim(), c = numClass(tok); if (c !== 'I') out.push({ cls: c, v: c === 'P' ? parseFloat(tok) : numCents(tok) }); }
+    }
+  });
+  return out;
+}
+/* each number goes to the oldest label still waiting for a number of its kind; "--" fills any waiting label */
+function assign(tokens){
+  var pending = [], got = {};
+  tokens.forEach(function(t){
+    if (t.label){ pending.push({ type: t.label, done: false }); if (pending.length > 10) pending.shift(); return; }
+    for (var j = 0; j < pending.length; j++){
+      var p = pending[j];
+      if (!p.done && (t.cls === 'X' || ACCEPT[p.type][t.cls])){ p.done = true; if (t.cls !== 'X' && !(p.type in got)) got[p.type] = t.v; break; }
+    }
+  });
+  return { value: got.value != null ? got.value : null, gain: got.gain != null ? got.gain : null, rate: got.rate != null ? got.rate : null };
+}
+function parseSegment(lines){
+  var tokens = tokenize(lines);
+  /* the number may sit above its label (big figure, small caption under it): read backwards, that becomes label-then-number */
+  var score = function(r){ return (r.value != null) + (r.gain != null) + (r.rate != null) + (consistent(r) ? 2 : 0); };
+  var fwd = assign(tokens), back = assign(tokens.slice().reverse());
+  var r = score(back) > score(fwd) ? back : fwd;
+  var monies = tokens.filter(function(t){ return t.cls === 'M'; }).map(function(t){ return Math.abs(t.v); });
+  var lim = lines.join(' ').match(/(?:购买上限|限购|限额)\D{0,6}?(\d+(?:\.\d{1,2})?)\s*元/);
+  var warn = [];
+  if (r.value == null && monies.length){ r.value = Math.max.apply(null, monies); warn.push('没找到“资产”这几个字，资产是按最大的数字猜的'); }
+  if (r.gain == null) warn.push('没认出持仓收益，请填上');
+  if (r.gain != null && r.rate != null && r.gain !== 0 && r.rate !== 0 && (r.gain > 0) !== (r.rate > 0)) warn.push('持仓收益和收益率一正一负，请核对正负号');
+  else if (r.gain != null && r.rate != null && !consistent(r)) warn.push('持仓收益和收益率对不太上，请对照截图核对');
+  r.limit = lim ? Math.round(parseFloat(lim[1]) * 100) : null; r.warn = warn;
+  return r;
+}
+function parseHoldings(raw){
+  var lines = normOcr(raw).split(/\r?\n/).map(function(l){ return l.trim(); }).filter(Boolean);
+  var starts = [];
+  lines.forEach(function(l, i){ if (isNameLine(l) && (!starts.length || i - starts[starts.length - 1] > 2)) starts.push(i); });
+  var segs = starts.length ? starts.map(function(st, k){ return { name: lines[st].replace(/\s*(详情|基金详情|>|›)\s*$/g, '').trim(), body: lines.slice(st + 1, k + 1 < starts.length ? starts[k + 1] : lines.length) }; })
+                           : [{ name: '', body: lines }];
+  return segs.map(function(sg){
+    var r = parseSegment(sg.body), f = sg.name ? matchFund(sg.name) : null;
+    r.name = sg.name; r.fundId = f ? f.id : (sg.name ? 'new' : (state.funds[0] ? state.funds[0].id : 'new'));
+    return r;
+  }).filter(function(r){ return r.value != null; });
+}
+function signedCents(v){
+  v = String(v == null ? '' : v).replace(/[,，\s¥￥元]/g, '').replace(/[−–—－]/g, '-').replace(/^\+/, '');
+  if (!/^-?\d+(\.\d{1,2})?$/.test(v)) return null;
+  return Math.round(parseFloat(v) * 100);
+}
+function snapCard(){
+  var h = '<section class="card"><div class="head"><h2>用截图更新持仓</h2><button class="link" type="button" data-act="howto">' + (ui.howto ? '收起' : '怎么把截图变成文字') + '</button></div>';
+  if (ui.howto){
+    h += '<div style="display:grid;gap:8px;font-size:14px"><p><b>设置一次快捷指令（推荐）</b></p><ol style="padding-left:20px;list-style:decimal;display:grid;gap:4px">'
+      + '<li>打开“快捷指令”app，点右上角“+”新建。</li><li>添加操作“从图像中提取文本”。</li><li>再添加操作“拷贝至剪贴板”。</li>'
+      + '<li>在这个快捷指令的设置里打开“在共享表单中显示”，接收类型选“图像”。</li><li>命名为“导入投资账本”。</li></ol>'
+      + '<p>以后：在相册打开持仓截图 → 分享 → 选“导入投资账本” → 回到这里点“粘贴截图文字”。</p>'
+      + '<p><b>不想设置也行</b>：在相册打开截图，点右下角的识别文字按钮（实况文本），长按文字选“全选”，拷贝，回来粘贴。</p>'
+      + '<p class="hint">文字识别在你的手机上完成，截图不会上传。不同 iOS 版本里按钮名字可能略有不同。</p></div>';
+  }
+  if (ui.snap){
+    var opts = function(sel){ return state.funds.map(function(f){ return '<option value="' + f.id + '"' + (f.id === sel ? ' selected' : '') + '>' + esc(f.name) + '</option>'; }).join('') + '<option value="new"' + (sel === 'new' ? ' selected' : '') + '>新建一只基金</option>'; };
+    h += '<form data-form="snap" novalidate style="display:grid;gap:12px"><p class="hint">认出 ' + ui.snap.length + ' 只基金。请核对数字，不对的直接改。</p>'
+      + ui.snap.map(function(r, i){
+        return '<div class="inline"><p class="li-sub">截图里：' + esc(r.name || '没认出基金名称') + '</p>'
+          + '<div class="field"><label for="s-fund-' + i + '">对应你的</label><select class="inp" id="s-fund-' + i + '">' + opts(r.fundId) + '</select></div>'
+          + '<div class="pair"><div class="field"><label for="s-val-' + i + '">资产</label><div class="unit"><span>¥</span><input class="inp" type="text" inputmode="decimal" id="s-val-' + i + '" value="' + plain(r.value) + '"></div></div>'
+          + '<div class="field"><label for="s-gain-' + i + '">持仓收益</label><div class="unit"><span>¥</span><input class="inp" type="text" inputmode="text" id="s-gain-' + i + '" value="' + (r.gain != null ? (r.gain < 0 ? '-' : '') + plain(Math.abs(r.gain)) : '') + '" placeholder="亏损前面加 -"></div></div></div>'
+          + (r.gain != null ? '<p class="hint">持仓成本 = 资产 − 持仓收益 = ' + fmt(r.value - r.gain) + (r.rate != null ? '；截图里的收益率是 ' + (r.rate > 0 ? '+' : r.rate < 0 ? '−' : '') + Math.abs(r.rate).toFixed(2) + '%' : '') + '</p>' : '')
+          + (r.limit != null ? '<label class="check" for="s-lim-' + i + '"><input type="checkbox" id="s-lim-' + i + '" checked><span>截图里写着每天限购 ' + fmt(r.limit) + '，同时改成这个限购</span></label>' : '')
+          + (r.warn.length ? '<p class="msg">' + esc(r.warn.join('；')) + '</p>' : '')
+          + '</div>';
+      }).join('')
+      + '<p class="msg" id="s-msg"></p><div class="actions"><button class="btn" type="submit">确认更新</button><button class="btn ghost" type="button" data-act="snap-cancel">取消</button></div></form>';
+  } else {
+    h += '<p class="hint">把基金 app 里的持仓页截图变成文字粘贴进来，自动填资产和持仓收益。还在确认中的买入，截图里通常还没有，下次截图会补上。</p><div class="actions"><button class="btn" type="button" data-act="paste">粘贴截图文字</button></div>';
+    if (ui.pasteBox) h += '<div class="field"><label for="s-text">没能直接读到剪贴板。长按下面的框，选“粘贴”，再点“识别”</label><textarea class="inp text" id="s-text" rows="5" style="height:auto;padding:10px 11px"></textarea></div><div class="actions"><button class="btn ghost" type="button" data-act="recognize">识别</button></div>';
+  }
+  return h + '</section>';
+}
+function runParse(text){
+  var res = parseHoldings(text);
+  if (!res.length){ ui.pasteBox = true; render(); toast('没认出持仓信息。确认粘贴的是持仓详情页的文字。'); return; }
+  ui.snap = res; ui.pasteBox = false; $('#toast').hidden = true; render();
+}
+function applySnap(){
+  var msg = $('#s-msg'), ups = [], ts = Date.now(), t = today();
+  for (var i = 0; i < ui.snap.length; i++){
+    var v = toCents($('#s-val-' + i).value), g = signedCents($('#s-gain-' + i).value);
+    if (v == null || g == null){ msg.textContent = '第 ' + (i + 1) + ' 只的资产或持仓收益不是有效数字。'; return; }
+    if (g > v){ msg.textContent = '第 ' + (i + 1) + ' 只的持仓收益比资产还大，请核对。'; return; }
+    var lim = $('#s-lim-' + i);
+    ups.push({ fundId: $('#s-fund-' + i).value, name: ui.snap[i].name, value: v, gain: g, limit: lim && lim.checked ? ui.snap[i].limit : null });
+  }
+  ups.forEach(function(u){
+    var f = u.fundId === 'new' ? null : fundById(u.fundId);
+    if (!f){
+      var nm = (u.name || '新基金').slice(0, 30), idx = indexOfName(nm);
+      f = cleanFund({ id: uid(), name: nm, index: idx, scale: idx === 'ndx', base: null, limit: null, prior: 0 });
+      state.funds.push(f);
+    }
+    f.value = u.value; f.valueDate = t; f.cost = u.value - u.gain; f.snapTs = ts;
+    if (u.limit != null) f.limit = u.limit;
+  });
+  ui.snap = null;
+  if (save()) toast('已更新 ' + ups.length + ' 只基金');
+  render();
+}
+
 /* ---------- 设置 ---------- */
 function fundForm(f){
   f = f || { name: '', index: 'ndx', scale: true, base: null, limit: null, prior: 0 };
@@ -485,6 +663,7 @@ function fundForm(f){
     + '<label class="check" for="f-scale"><input type="checkbox" id="f-scale"' + (f.scale ? ' checked' : '') + '><span>跟着指数回撤多投（按下面的跌多投规则乘倍数）</span></label>'
     + '<div class="pair"><div class="field"><label for="f-limit">每天限购 <span class="hint">没有就留空</span></label><div class="unit"><span>¥</span><input class="inp" type="text" inputmode="decimal" id="f-limit" value="' + plain(f.limit) + '"></div></div>'
     + '<div class="field"><label for="f-prior">用这个之前已投的本金</label><div class="unit"><span>¥</span><input class="inp" type="text" inputmode="decimal" id="f-prior" value="' + (f.prior ? plain(f.prior) : '') + '" placeholder="0"></div></div></div>'
+    + (f.cost != null ? '<p class="hint">已经用截图更新过：持仓成本按截图里的算，“之前已投的本金”不再参与计算。</p>' : '')
     + '<p class="msg" id="f-msg"></p><div class="actions"><button class="btn small" type="submit">保存</button><button class="btn ghost small" type="button" data-act="cancel-fund">取消</button></div>'
     + (ui.editFund ? '<p><button class="link danger" type="button" data-act="del-fund">' + (ui.confirmDelFund ? '再点一次确认删除这只基金' : '删除这只基金') + '</button></p>' : '')
     + '</form>';
@@ -496,7 +675,8 @@ function viewSet(){
     if (ui.editFund === f.id) return '<li>' + fundForm(f) + '</li>';
     var bits = [INDEX[f.index] || '其他指数', f.base != null ? '每天 ' + fmt(f.base) : '还没设金额', f.scale ? '跟着回撤多投' : '固定金额'];
     if (f.limit) bits.push('限购 ' + fmt(f.limit));
-    if (f.prior) bits.push('之前已投 ' + fmt(f.prior, { big: true }));
+    if (f.cost != null) bits.push('截图里的成本 ' + fmt(f.cost, { big: true }) + '（' + mdCn(f.valueDate) + '）');
+    else if (f.prior) bits.push('之前已投 ' + fmt(f.prior, { big: true }));
     return '<li><div class="li-top"><b>' + esc(f.name) + '</b><button class="link" type="button" data-act="edit-fund" data-id="' + f.id + '">改</button></div><p class="li-sub">' + esc(bits.join(' · ')) + '</p></li>';
   }).join('') + '</ul>' + (!state.funds.length && !ui.addFund ? '<p class="empty">还没有基金。</p>' : '') + '</section>';
 
@@ -620,6 +800,16 @@ document.addEventListener('click', function(ev){
   else if (act === 'keep'){ ui.confirmDel = null; render(); }
   else if (act === 'del'){ state.entries = state.entries.filter(function(e){ return e.id !== b.dataset.id; }); ui.confirmDel = null; if (save()) toast('已删除这一笔'); render(); }
   else if (act === 'all'){ ui.showAll = true; render(); }
+  else if (act === 'howto'){ ui.howto = !ui.howto; render(); }
+  else if (act === 'paste'){
+    var fallback = function(){ ui.pasteBox = true; render(); var ta = $('#s-text'); if (ta) ta.focus(); };
+    try {
+      if (navigator.clipboard && navigator.clipboard.readText) navigator.clipboard.readText().then(function(txt){ if (txt && txt.trim()) runParse(txt); else fallback(); }, fallback);
+      else fallback();
+    } catch (e) { fallback(); }
+  }
+  else if (act === 'recognize'){ var ta2 = $('#s-text'); if (ta2 && ta2.value.trim()) runParse(ta2.value); }
+  else if (act === 'snap-cancel'){ ui.snap = null; render(); }
   else if (act === 'add-fund'){ ui.addFund = true; ui.editFund = null; render(); $('#f-name').focus(); }
   else if (act === 'edit-fund'){ ui.editFund = b.dataset.id; ui.addFund = false; ui.confirmDelFund = false; render(); }
   else if (act === 'cancel-fund'){ ui.editFund = null; ui.addFund = false; ui.confirmDelFund = false; render(); }
@@ -657,9 +847,11 @@ document.addEventListener('change', function(ev){
 document.addEventListener('submit', function(ev){
   ev.preventDefault();
   var form = ev.target, kind = form.dataset.form, t = today();
+  if (kind === 'snap'){ applySnap(); return; }
   if (kind === 'value'){
     var c = toCents($('#v-amt').value), f = fundById(form.dataset.id);
     if (c == null){ $('#v-msg').textContent = '填一个金额，最多两位小数。'; return; }
+    if (f.cost != null){ f.cost = investedFor(f); f.snapTs = Date.now(); }
     f.value = c; f.valueDate = t; ui.editValue = null;
     if (save()) toast('市值已更新'); render();
   } else if (kind === 'manual'){
