@@ -4,9 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>投资账本</title>
-<meta name="description" content="按跌多投的规则算出今天每只基金投多少，一键记下；看累计投入、市值、收益和目标进度。">
-<meta name="theme-color" content="#EEF1F5" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0E1318" media="(prefers-color-scheme: dark)">
+<meta name="description" content="按跌多投的规则算出今天每只基金投多少，一键记下；看总资产、财务自由度、定投进度和收益。">
+<meta name="theme-color" content="#F0F1F6" id="themeColor">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="投资账本">
@@ -15,169 +14,321 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&amp;display=swap" media="print" onload="this.media='all'">
 <style>
 html{-webkit-text-size-adjust:100%}
-:root{color-scheme:light}
-body{margin:0;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px);-webkit-tap-highlight-color:transparent}
+body{margin:0;-webkit-tap-highlight-color:transparent}
 [hidden]{display:none!important}
-/* Layout: a one-column ledger. "今天" opens on the one number that matters (how much to put in today) with the index
-   drawdown that produced it; "总览" is a few big read-only figures; "设置" holds everything that is typed once.
-   Chinese market colours: gains red, losses green, always with a sign. */
+/* Four pages, like a phone ledger: 账本 (what I own), 定投 (what I've put in), 计算器 (what to put in today, dark like a
+   trading tool), 设置. Chinese market colours: gains red, losses green, always with a sign.
+   Numbers use the rounded system face on Apple devices. */
 :root{
-  --bg:#EEF1F5; --surface:#FFFFFF; --ink:#141A22; --ink-2:#4C5866; --muted:#7A8592;
-  --line:#DFE4EA; --line-2:#C5CDD6; --accent:#3157C9; --up:#C9302C; --down:#11804A;
+  color-scheme:light;
+  --bg:#F0F1F6; --card:#FFFFFF; --tile:#F5F6FA; --ink:#171A23; --ink-2:#696E7E; --muted:#9A9FAD; --line:#E6E8EF;
+  --blue:#3366F0; --blue-soft:#E7EEFF; --violet:#7B61FF; --green:#16A35A; --green-soft:#E3F6EA; --orange:#FF9500; --purple:#8C5CF6;
+  --up:#E5383B; --down:#0E9F55; --on-accent:#FFFFFF;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4; --s6:#008300;
+  --heat1:#D6E2FF; --heat2:#9DB8FA; --heat3:#5E86F2; --heat4:#2D57D8;
+  --h-sky1:#E8EFE9; --h-sky2:#F8EFE1; --h-sun:#F7D7A2; --h-glow:#FBE6C3; --h-m1:#C9D6CF; --h-m2:#AFC3B8; --h-near:#F6F7F3; --h-edge:#DFE5DD;
+  --h-tree:#6D8A7C; --h-step:#93A89D; --h-ink:#1C3A2D; --h-ink-2:#3E6955; --h-pill:rgba(255,255,255,.62);
+  --shadow:0 1px 2px rgba(23,26,35,.04),0 10px 28px -16px rgba(23,26,35,.18);
+  --tabbar:rgba(255,255,255,.86);
   --font-body:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;
-  --font-data:"Barlow Semi Condensed","DIN Alternate","Bahnschrift","Roboto Condensed",-apple-system,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --font-num:ui-rounded,"SF Pro Rounded",-apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans SC",system-ui,sans-serif;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --bg:#0E1318; --surface:#171D24; --ink:#E7ECF1; --ink-2:#A8B3BF; --muted:#86919D;
-    --line:#26303A; --line-2:#3A4652; --accent:#7D9BF2; --up:#F07272; --down:#3DBE7C;
     color-scheme:dark;
+    --bg:#121215; --card:#1D1D21; --tile:#27272C; --ink:#F1F2F5; --ink-2:#A6A9B4; --muted:#7E828E; --line:#303036;
+    --blue:#6B93FF; --blue-soft:#24304D; --violet:#9C88FF; --green:#38C77A; --green-soft:#1D3527; --orange:#FF9F0A; --purple:#A887FF;
+    --up:#FF6467; --down:#3DD68C;
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300;
+    --heat1:#22304F; --heat2:#2E4C93; --heat3:#4570DA; --heat4:#7EA0FF;
+    --h-sky1:#16222A; --h-sky2:#22303A; --h-sun:#ECE6CF; --h-glow:rgba(236,230,207,.22); --h-m1:#2B3B44; --h-m2:#22313A; --h-near:#2F3F48; --h-edge:#3A4C55;
+    --h-tree:#16232A; --h-step:#647B86; --h-ink:#EAF2EC; --h-ink-2:#B5CABE; --h-pill:rgba(20,30,36,.55);
+    --shadow:none; --tabbar:rgba(29,29,33,.88);
   }
 }
-:root[data-theme="dark"]{
-  --bg:#0E1318; --surface:#171D24; --ink:#E7ECF1; --ink-2:#A8B3BF; --muted:#86919D;
-  --line:#26303A; --line-2:#3A4652; --accent:#7D9BF2; --up:#F07272; --down:#3DBE7C;
+:root[data-theme="dark"],:root[data-page="calc"]{
   color-scheme:dark;
+  --bg:#121215; --card:#1D1D21; --tile:#27272C; --ink:#F1F2F5; --ink-2:#A6A9B4; --muted:#7E828E; --line:#303036;
+  --blue:#6B93FF; --blue-soft:#24304D; --violet:#9C88FF; --green:#38C77A; --green-soft:#1D3527; --orange:#FF9F0A; --purple:#A887FF;
+  --up:#FF6467; --down:#3DD68C;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300;
+  --heat1:#22304F; --heat2:#2E4C93; --heat3:#4570DA; --heat4:#7EA0FF;
+  --h-sky1:#16222A; --h-sky2:#22303A; --h-sun:#ECE6CF; --h-glow:rgba(236,230,207,.22); --h-m1:#2B3B44; --h-m2:#22313A; --h-near:#2F3F48; --h-edge:#3A4C55;
+  --h-tree:#16232A; --h-step:#647B86; --h-ink:#EAF2EC; --h-ink-2:#B5CABE; --h-pill:rgba(20,30,36,.55);
+  --shadow:none; --tabbar:rgba(29,29,33,.88);
 }
 *,*::before,*::after{box-sizing:border-box}
-body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased;transition:background-color .25s}
 h1,h2,h3,p,ol,ul,dl,dd{margin:0}
 ol,ul{padding:0;list-style:none}
-button,input,select{font:inherit;color:inherit}
+button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
-:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
-.num{font-family:var(--font-data);font-variant-numeric:tabular-nums}
+.num{font-family:var(--font-num);font-variant-numeric:tabular-nums}
 .up{color:var(--up)} .down{color:var(--down)}
+svg.i{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 
-.app{max-width:560px;margin-inline:auto;padding-inline:16px;padding-block:18px 56px;display:grid;gap:14px}
-.top{display:flex;align-items:flex-end;justify-content:space-between;gap:8px 16px;flex-wrap:wrap}
-.top h1{font-size:26px;font-weight:700;letter-spacing:.02em;line-height:1.2}
-.top p{font-size:13px;color:var(--ink-2)}
-.tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;background:var(--line);border-radius:10px;padding:4px;position:sticky;top:env(safe-area-inset-top,0px);z-index:3}
-.tabs button{border:0;border-radius:7px;background:transparent;height:38px;font-size:14.5px;color:var(--ink-2)}
-.tabs button[aria-selected="true"]{background:var(--surface);color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.app{max-width:560px;margin-inline:auto;padding:calc(14px + env(safe-area-inset-top,0px)) 16px calc(96px + env(safe-area-inset-bottom,0px));display:grid;gap:14px}
+#view{display:grid;gap:14px;min-width:0}
+.foot{font-size:12px;color:var(--muted);text-align:center;padding-top:4px}
 
-.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:grid;gap:12px;min-width:0}
-.card > h2,.h2{font-size:15px;font-weight:600}
-.head{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
-.eyebrow{font-size:12.5px;color:var(--ink-2)}
+/* bottom tab bar */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--tabbar);-webkit-backdrop-filter:saturate(1.6) blur(18px);backdrop-filter:saturate(1.6) blur(18px);border-top:1px solid var(--line);padding:6px max(10px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(10px,env(safe-area-inset-left,0px))}
+.tabbar-in{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}
+.tabbar button{border:0;background:none;display:grid;justify-items:center;gap:2px;padding:4px 0;font-size:11px;color:var(--muted)}
+.tabbar button svg.i{width:24px;height:24px}
+.tabbar button[aria-selected="true"]{color:var(--blue);font-weight:600}
+:root[data-page="calc"] .tabbar button[aria-selected="true"]{color:var(--orange)}
+
+/* cards */
+.card{background:var(--card);border-radius:22px;padding:18px;display:grid;gap:14px;min-width:0;box-shadow:var(--shadow)}
+.sh{display:flex;align-items:center;gap:10px;min-width:0}
+.sh h2{font-size:18px;font-weight:700;letter-spacing:.01em;flex:1;min-width:0}
+.badge{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;flex:none;color:#fff}
+.badge svg.i{width:16px;height:16px;stroke-width:2.4}
+.pill{border:0;border-radius:999px;padding:5px 12px;font-size:13px;font-weight:600;background:var(--blue-soft);color:var(--blue);display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.pill.green{background:var(--green-soft);color:var(--green)}
+.pill.plain{background:none;color:var(--ink-2);font-weight:400;padding-inline:4px}
+.pill svg.i{width:15px;height:15px}
 .hint{font-size:12.5px;color:var(--ink-2)}
 .hint:empty{display:none}
 .msg{font-size:13px;color:var(--up)}
 .msg:empty{display:none}
+.empty{font-size:14px;color:var(--ink-2)}
 
-/* today */
-.hero{background:color-mix(in srgb,var(--accent) 7%,var(--surface));border-color:color-mix(in srgb,var(--accent) 22%,var(--line))}
-.big{font:700 52px/1 var(--font-data);font-variant-numeric:tabular-nums;letter-spacing:-.01em;overflow-wrap:anywhere}
-.big small{font:500 17px var(--font-body);color:var(--ink-2);margin-left:6px;letter-spacing:0}
-.idx{display:grid;gap:8px;padding-top:12px;border-top:1px solid var(--line)}
-.idx-row{display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:10px;align-items:center}
-.idx-row b{font-weight:600;font-size:14.5px}
-.idx-facts{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:13px;color:var(--ink-2)}
-.chip{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:1px 9px;font-size:12.5px;background:var(--bg);color:var(--ink);border:1px solid var(--line-2)}
-.chip.hot{border-color:var(--accent);color:var(--accent)}
-.plan{display:grid}
-.plan li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;padding:10px 0;border-top:1px solid var(--line);align-items:baseline}
-.plan li:first-child{border-top:0}
-.plan .nm{font-size:14.5px;font-weight:600;overflow-wrap:anywhere}
-.plan .amt{font:600 20px var(--font-data);font-variant-numeric:tabular-nums;text-align:right}
-.plan .why{grid-column:1 / -1;font-size:12.5px;color:var(--ink-2)}
-.plan .off{color:var(--muted)}
+/* hero (账本) */
+.hero{position:relative;overflow:hidden;border-radius:26px;min-height:214px;padding:22px 20px 20px;color:var(--h-ink);box-shadow:var(--shadow);isolation:isolate}
+.hero .scene{position:absolute;inset:0;width:100%;height:100%;z-index:-1}
+.hero h1{font-size:27px;font-weight:800;letter-spacing:.04em;line-height:1.2}
+.hero .slogan{font-size:13.5px;color:var(--h-ink-2);margin-top:4px;letter-spacing:.04em}
+.hero .datepill{position:absolute;top:20px;right:16px;display:flex;align-items:center;gap:6px;background:var(--h-pill);border-radius:999px;padding:5px 12px 5px 9px;font:600 13.5px var(--font-num);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.hero .datepill svg.i{width:18px;height:18px}
+.hero .lab{font-size:13px;color:var(--h-ink-2);margin-top:26px}
+.hero .total{font:800 44px/1.05 var(--font-num);font-variant-numeric:tabular-nums;letter-spacing:-.01em;margin-top:2px;overflow-wrap:anywhere}
+.hero .sub{font-size:12.5px;color:var(--h-ink-2);margin-top:4px}
 
-.inp{width:100%;min-width:0;height:44px;padding:0 11px;border:1px solid var(--line-2);border-radius:9px;background:var(--surface);font:500 17px var(--font-data);font-variant-numeric:tabular-nums}
+.strip{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:18px;padding:12px 14px;box-shadow:var(--shadow);border:0;text-align:left;width:100%}
+.strip .badge{width:34px;height:34px;border-radius:11px;background:linear-gradient(135deg,#FF9500,#FFC20E)}
+.strip .badge svg.i{width:19px;height:19px}
+.strip .t{flex:1;min-width:0;display:grid}
+.strip .t b{font-size:15px}
+.strip .t span{font-size:12.5px;color:var(--ink-2)}
+.strip > svg.i{color:var(--muted)}
+
+/* ring + key/values */
+.ringrow{display:grid;grid-template-columns:118px minmax(0,1fr);gap:18px;align-items:center}
+.ring{width:118px;height:118px;position:relative}
+.ring svg{display:block;width:100%;height:100%}
+.ring .t{position:absolute;inset:0;display:grid;place-content:center;text-align:center}
+.ring .t b{font:800 25px/1.1 var(--font-num);color:var(--blue)}
+.ring .t small{font-size:12px;color:var(--ink-2)}
+.ring.sm{width:100px;height:100px}
+.ring.sm .t b{font-size:20px;color:var(--ink)}
+.kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px 10px;font-size:14px;align-items:baseline}
+.kv dt{color:var(--ink-2)}
+.kv dd{text-align:right;font:700 16px var(--font-num);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.kv dd.hl{color:var(--blue)}
+
+/* tiles */
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.tile{background:var(--tile);border-radius:16px;padding:14px;display:grid;gap:8px;align-content:start;min-width:0;border:0;text-align:left}
+button.tile{cursor:pointer}
+.tile .k{display:flex;align-items:center;gap:7px;font-size:14px;color:var(--ink-2)}
+.tile .k svg.i{width:22px;height:22px}
+.tile .v{font:800 23px/1.15 var(--font-num);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.tile .s{font-size:11.5px;color:var(--muted);line-height:1.4}
+.tiles.solo .tile{background:var(--card);box-shadow:var(--shadow);border-radius:20px;padding:16px}
+.tiles.solo .tile .v{font-size:25px}
+
+/* goal progress */
+.prog{display:grid;grid-template-columns:100px minmax(0,1fr);gap:18px;align-items:center}
+.prog .done-k{font-size:13px;color:var(--ink-2)}
+.prog .done-v{font:800 30px/1.15 var(--font-num);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.prog .goal{font-size:13.5px;color:var(--ink-2);display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:4px}
+.prog .goal b{color:var(--green)}
+
+/* holdings */
+.sum3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.sum3 div{display:grid;gap:2px;min-width:0}
+.sum3 span{font-size:12px;color:var(--ink-2)}
+.sum3 b{font:800 18px var(--font-num);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.alloc{display:flex;gap:2px;height:12px;border-radius:6px;overflow:hidden;background:var(--tile)}
+.alloc i{display:block;height:100%;min-width:3px}
+.funds{display:grid}
+.funds > li{display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:4px 10px;align-items:center;padding:12px 0;border-top:1px solid var(--line)}
+.funds > li:first-child{border-top:0;padding-top:4px}
+.funds .dot{width:10px;height:10px;border-radius:50%}
+.funds .nm{font-weight:600;font-size:14.5px;overflow-wrap:anywhere}
+.funds .nm small{display:block;font-weight:400;font-size:12px;color:var(--ink-2)}
+.funds .val{text-align:right;display:grid;justify-items:end}
+.funds .val b{font:700 16px var(--font-num);font-variant-numeric:tabular-nums}
+.funds .val span{font:600 12.5px var(--font-num);font-variant-numeric:tabular-nums}
+.funds .edit{grid-column:1 / -1}
+.linkbtn{background:none;border:0;padding:2px 0;color:var(--blue);font-size:13px;font-weight:600}
+.link{background:none;border:0;padding:4px 0;font-size:13px;color:var(--ink-2);text-decoration:underline;text-underline-offset:3px}
+.link.danger{color:var(--up)}
+
+/* charts */
+.viz{position:relative;min-width:0}
+.viz svg{display:block;width:100%;height:auto;overflow:visible}
+.viz .grid{stroke:var(--line);stroke-width:1}
+.viz .ax{fill:var(--muted);font:500 10.5px var(--font-num)}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:var(--ink-2)}
+.legend i{display:inline-block;width:14px;height:0;border-top:2px solid;vertical-align:middle;margin-right:5px}
+.legend i.dash{border-top-style:dashed}
+.tip{position:absolute;z-index:2;pointer-events:none;background:var(--ink);color:var(--card);border-radius:10px;padding:7px 10px;font-size:12px;line-height:1.5;white-space:nowrap;transform:translate(-50%,-100%);box-shadow:0 6px 20px rgba(0,0,0,.18)}
+.tip b{font:700 12.5px var(--font-num)}
+[data-tip]{cursor:pointer}
+.hit{fill:transparent}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+.cal span{font-size:11px;color:var(--muted);text-align:center}
+.cal i{aspect-ratio:1;border-radius:8px;background:var(--tile);display:grid;place-items:center;font:600 11.5px var(--font-num);font-style:normal;color:var(--ink-2)}
+.cal i.h1{background:var(--heat1)} .cal i.h2{background:var(--heat2)} .cal i.h3{background:var(--heat3);color:#fff} .cal i.h4{background:var(--heat4);color:#fff}
+.cal i.today{box-shadow:inset 0 0 0 2px var(--blue)}
+.cal i.blank{background:none}
+.cal i.we{opacity:.45}
+.heatkey{display:flex;align-items:center;gap:4px;font-size:11.5px;color:var(--muted);justify-content:flex-end}
+.heatkey i{width:12px;height:12px;border-radius:3px;background:var(--tile)}
+.monthnav{display:flex;align-items:center;gap:6px}
+.monthnav button{border:0;background:var(--tile);width:30px;height:30px;border-radius:9px;display:grid;place-items:center;color:var(--ink-2)}
+.monthnav button svg.i{width:16px;height:16px}
+.monthnav b{font:700 14px var(--font-num);min-width:72px;text-align:center}
+
+/* 定投 hero */
+.dhero{position:relative;overflow:hidden;background:var(--card);border-radius:24px;padding:20px;box-shadow:var(--shadow);display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:10px;isolation:isolate}
+.dhero .deco{position:absolute;right:-10px;bottom:-6px;width:62%;height:100%;z-index:-1;opacity:.9}
+.dhero .flag{display:flex;align-items:center;gap:8px;font-weight:700;color:var(--green);font-size:15px}
+.dhero .flag svg.i{width:22px;height:22px;fill:var(--green)}
+.dhero .k{font-size:14px;color:var(--ink-2);margin-top:12px}
+.dhero .days{font:800 64px/1 var(--font-num);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.dhero .days small{font:500 20px var(--font-body);color:var(--ink-2);margin-left:6px;letter-spacing:0}
+.dhero .from{font-size:13px;color:var(--ink-2);margin-top:10px}
+.rules{align-self:center;display:grid;gap:8px;font-size:13.5px;justify-items:start;padding-left:6px}
+.rules h3{font-size:13px;font-weight:700;color:var(--green);letter-spacing:.02em}
+.rules p{display:flex;gap:7px;align-items:baseline}
+.rules p b{font:800 14px var(--font-num);color:var(--green);min-width:2.2em}
+.rules p span{color:var(--ink)}
+
+/* forms */
+.inp{width:100%;min-width:0;height:46px;padding:0 12px;border:1px solid var(--line);border-radius:12px;background:var(--tile);font:600 17px var(--font-num);font-variant-numeric:tabular-nums}
 .inp.text{font:400 16px var(--font-body)}
-select.inp{font:400 16px var(--font-body);appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--ink-2) 50%),linear-gradient(135deg,var(--ink-2) 50%,transparent 50%);background-position:calc(100% - 17px) 19px,calc(100% - 12px) 19px;background-size:5px 5px;background-repeat:no-repeat;padding-right:30px}
-.field{display:grid;gap:5px;min-width:0}
-.field > label,.field > .lab{font-size:12.5px;color:var(--ink-2)}
+.inp::placeholder{color:var(--muted);font-weight:400}
+textarea.inp{height:auto;padding:10px 12px;font:400 15px var(--font-body)}
+select.inp{font:400 16px var(--font-body);appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--ink-2) 50%),linear-gradient(135deg,var(--ink-2) 50%,transparent 50%);background-position:calc(100% - 17px) 20px,calc(100% - 12px) 20px;background-size:5px 5px;background-repeat:no-repeat;padding-right:30px}
+.field{display:grid;gap:6px;min-width:0}
+.field > label,.field > .lab{font-size:13px;color:var(--ink-2)}
 .pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .unit{display:flex;align-items:center;gap:8px;min-width:0}
 .unit span{flex:none;font-size:14px;color:var(--ink-2)}
 .check{display:flex;align-items:flex-start;gap:9px;font-size:14px;line-height:1.5}
-.check input{width:20px;height:20px;flex:none;margin:1px 0 0;accent-color:var(--accent)}
-.btn{height:48px;border-radius:10px;border:1px solid var(--ink);background:var(--ink);color:var(--surface);font-weight:600;font-size:15.5px;padding-inline:18px}
-.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line-2);font-weight:400}
-.btn.small{height:40px;font-size:14px}
-.actions .btn.full{flex-basis:100%}
-.btn:disabled{opacity:.5;cursor:default}
+.check input{width:20px;height:20px;flex:none;margin:1px 0 0;accent-color:var(--blue)}
+.btn{height:48px;border-radius:14px;border:0;background:var(--blue);color:var(--on-accent);font-weight:700;font-size:15.5px;padding-inline:18px}
+.btn.ghost{background:var(--tile);color:var(--ink);font-weight:500}
+.btn.small{height:42px;font-size:14.5px;border-radius:12px}
+.btn:disabled{opacity:.45;cursor:default}
 .actions{display:flex;flex-wrap:wrap;gap:8px}
-.actions .btn{flex:1 1 140px}
-.link{background:none;border:0;padding:4px 0;font-size:13px;color:var(--ink-2);text-decoration:underline;text-underline-offset:3px}
-.link.danger{color:var(--up)}
-.done-box{display:flex;align-items:center;gap:10px;border-radius:10px;padding:10px 12px;background:var(--bg);font-size:14px}
-.done-box i{width:10px;height:10px;border-radius:50%;background:var(--accent);flex:none}
+.actions .btn{flex:1 1 130px}
+.actions .btn.full{flex-basis:100%}
+.inline{display:grid;gap:12px;padding:14px;border-radius:16px;background:var(--tile)}
+.inline .inp{background:var(--card)}
+.inline .btn.ghost{background:var(--card)}
 
-/* overview */
-.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.tile{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;gap:4px;min-width:0}
-.tile .k{font-size:12.5px;color:var(--ink-2)}
-.tile .v{font:700 25px/1.15 var(--font-data);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
-.tile .s{font-size:12px;color:var(--muted)}
-.tile.wide{grid-column:1 / -1}
-.tile.wide .v{font-size:38px}
-.ringrow{display:grid;grid-template-columns:96px minmax(0,1fr);gap:16px;align-items:center}
-.ring{width:96px;height:96px;position:relative}
-.ring svg{display:block;transform:rotate(-90deg)}
-.ring .t{position:absolute;inset:0;display:grid;place-content:center;text-align:center;font:700 20px var(--font-data)}
-.ring .t small{display:block;font:400 11px var(--font-body);color:var(--ink-2)}
-.ring-bg{stroke:var(--line);fill:none}
-.ring-fg{stroke:var(--accent);fill:none;stroke-linecap:round}
-.kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 12px;font-size:14px}
-.kv dt{color:var(--ink-2)}
-.kv dd{text-align:right;font:600 15px var(--font-data);font-variant-numeric:tabular-nums}
-.tablewrap{overflow-x:auto;position:relative}
-table{border-collapse:collapse;width:100%;font-size:13.5px}
-th,td{padding:9px 8px 9px 0;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
-th{font-weight:400;font-size:12px;color:var(--ink-2)}
-td.r,th.r{text-align:right}
-td.n{font:500 14.5px var(--font-data);font-variant-numeric:tabular-nums;white-space:nowrap}
-td.acts{text-align:right;white-space:nowrap;padding-right:0}
-td.acts .link{margin-left:10px}
-.fundrow td:first-child{font-weight:600}
-.inline{display:grid;gap:10px;padding:12px;border:1px dashed var(--line-2);border-radius:10px;margin-block:4px 8px}
-.empty{font-size:13.5px;color:var(--ink-2)}
+/* records */
+.recs{display:grid}
+.recs li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;padding:11px 0;border-top:1px solid var(--line);align-items:center}
+.recs li:first-child{border-top:0}
+.recs .d{font-size:14px;font-weight:600}
+.recs .d small{font-weight:400;color:var(--ink-2);margin-left:6px;font-size:12.5px}
+.recs .a{font:700 16px var(--font-num);font-variant-numeric:tabular-nums;text-align:right}
+.recs .x{grid-column:1 / -1;display:flex;gap:12px;font-size:12.5px;color:var(--ink-2);flex-wrap:wrap}
+.recs .x .link{padding:0;font-size:12.5px}
+.recs .x .one{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 
-/* settings */
-.list{display:grid}
-.list > li{padding:12px 0;border-top:1px solid var(--line);display:grid;gap:8px}
-.list > li:first-child{border-top:0;padding-top:0}
+/* 计算器 (dark) */
+.calc-title{display:grid;justify-items:center;gap:2px;text-align:center;padding-top:6px}
+.calc-title h1{display:flex;align-items:center;gap:10px;font-size:21px;font-weight:700;letter-spacing:.04em}
+.calc-title h1 svg.i{width:28px;height:28px;color:var(--orange)}
+.calc-title p{font:500 14px var(--font-num);color:var(--ink-2)}
+.seg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.seg button{border:0;height:46px;border-radius:13px;background:none;color:var(--ink-2);font-size:15.5px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px}
+.seg button[aria-selected="true"]{background:var(--tile);color:var(--ink)}
+.seg button svg.i{width:19px;height:19px}
+.seg .cnt{min-width:24px;height:24px;border-radius:12px;background:var(--orange);color:#1A1205;font:700 12.5px/24px var(--font-num);padding:0 6px}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chips button{border:1px solid var(--line);background:none;border-radius:999px;padding:6px 14px;font-size:14px;color:var(--ink-2)}
+.chips button[aria-pressed="true"]{border-color:var(--orange);color:var(--orange);font-weight:600}
+.cfield{display:grid;gap:8px;min-width:0}
+.cfield .lab{display:flex;align-items:center;gap:7px;font-size:15px;color:var(--ink-2)}
+.cfield .lab svg.i{width:18px;height:18px}
+.cbox{position:relative}
+.cbox .inp{height:56px;border-radius:14px;font-size:20px;padding:0 16px;background:var(--tile);border-color:var(--line);letter-spacing:.04em}
+.cbox .suf{position:absolute;right:16px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:16px;pointer-events:none}
+.zone{height:56px;border-radius:14px;border:1px solid var(--line);background:var(--tile);display:flex;align-items:center;padding:0 16px;font-size:17px;font-weight:700}
+.zone.z0,.zone.z1{color:var(--green)} .zone.z2{color:var(--ink)} .zone.z3{color:var(--orange)} .zone.z4{color:var(--up)} .zone.none{color:var(--muted);font-weight:400;font-size:14px}
+.go{height:58px;border:0;border-radius:16px;background:linear-gradient(90deg,#FF8A00,#FFC312);color:#fff;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 10px 28px -10px rgba(255,149,0,.7);width:100%;letter-spacing:.06em}
+.go svg.i{width:24px;height:24px}
+.res{background:var(--tile);border:1px solid var(--line);border-radius:22px;padding:14px;display:grid;gap:12px}
+.res.pop{animation:pop .45s cubic-bezier(.2,.8,.2,1)}
+@keyframes pop{from{opacity:.2;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){ .res.pop{animation:none} body{transition:none} }
+.ctile{border:1px solid var(--line);border-radius:16px;padding:14px 16px;display:grid;gap:8px;background:var(--card);min-width:0}
+.ctile .k{display:flex;align-items:center;gap:7px;font-size:14px;color:var(--ink-2)}
+.ctile .k svg.i{width:18px;height:18px}
+.ctile .v{font:600 26px/1.1 var(--font-num);font-variant-numeric:tabular-nums;letter-spacing:.06em}
+.ctile .row{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.ctile .tier{color:var(--green);font-size:14px;font-weight:600}
+.today-amt{border:1px solid rgba(255,149,0,.55);background:linear-gradient(180deg,rgba(255,149,0,.16),rgba(255,149,0,.06));border-radius:16px;padding:16px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.today-amt .k{display:flex;align-items:center;gap:8px;color:var(--orange);font-size:15px;font-weight:700}
+.today-amt .k svg.i{width:24px;height:24px}
+.today-amt .v{font:800 40px/1 var(--font-num);margin-left:auto;font-variant-numeric:tabular-nums;color:var(--orange);letter-spacing:.02em}
+.brk{display:grid}
+.brk li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;padding:10px 0;border-top:1px solid var(--line);align-items:baseline}
+.brk li:first-child{border-top:0}
+.brk .nm{font-size:14.5px;font-weight:600;overflow-wrap:anywhere}
+.brk .amt{font:700 17px var(--font-num);font-variant-numeric:tabular-nums}
+.brk .why{grid-column:1 / -1;font-size:12.5px;color:var(--ink-2)}
+.brk .off{color:var(--muted)}
+.btn.light{background:#F4F4F6;color:#141416}
+.btn.dim{background:var(--tile);color:var(--ink);font-weight:500}
+.donebox{display:flex;align-items:center;gap:10px;border-radius:14px;padding:12px 14px;background:rgba(56,199,122,.12);color:var(--green);font-size:14px;font-weight:600}
+.donebox svg.i{width:20px;height:20px}
+.pyr{display:grid;gap:10px}
+.pyr svg{display:block;width:100%;height:auto}
+.pyr .lvl{fill:var(--tile);stroke:var(--line)}
+.pyr .lvl.on{fill:url(#pyrOn);stroke:none}
+.pyr text{font:600 12.5px var(--font-num);fill:var(--ink-2)}
+.pyr text.on{fill:#2A1700;font-weight:800}
+
+details.card > summary{cursor:pointer;font-size:16px;font-weight:700;list-style:none;display:flex;justify-content:space-between;align-items:center}
+details.card > summary::-webkit-details-marker{display:none}
+details.card > summary::after{content:"展开";font-weight:400;font-size:13px;color:var(--ink-2)}
+details.card[open] > summary::after{content:"收起"}
+.setlist{display:grid}
+.setlist > li{padding:12px 0;border-top:1px solid var(--line);display:grid;gap:8px}
+.setlist > li:first-child{border-top:0;padding-top:0}
 .li-top{display:flex;align-items:baseline;gap:10px}
 .li-top b{font-weight:600;min-width:0;overflow-wrap:anywhere}
 .li-top .link{margin-left:auto}
 .li-sub{font-size:12.5px;color:var(--ink-2)}
 .tiers{display:grid;gap:8px}
-.tier{display:grid;grid-template-columns:auto 84px auto 84px auto;gap:6px;align-items:center;font-size:14px}
-.tier .inp{height:40px;font-size:16px;padding:0 8px}
-details.card > summary{cursor:pointer;font-size:15px;font-weight:600;list-style:none;display:flex;justify-content:space-between}
-details.card > summary::-webkit-details-marker{display:none}
-details.card > summary::after{content:"展开";font-weight:400;font-size:13px;color:var(--ink-2)}
-details.card[open] > summary::after{content:"收起"}
-.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:9;max-width:calc(100% - 32px);background:var(--ink);color:var(--surface);padding:10px 16px;border-radius:9px;font-size:14px}
-.foot{font-size:12px;color:var(--muted)}
-@media (max-width:380px){ .big{font-size:44px} .idx-row{grid-template-columns:minmax(0,1fr) 130px} .tier{grid-template-columns:auto 70px auto 70px auto} }
+.tier-row{display:grid;grid-template-columns:auto 76px auto 76px auto;gap:6px;align-items:center;font-size:14px}
+.tier-row .inp{height:42px;font-size:16px;padding:0 8px}
+.cuts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.cuts .inp{height:42px;font-size:16px;padding:0 8px;text-align:center}
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:9;max-width:calc(100% - 32px);background:var(--ink);color:var(--card);padding:10px 16px;border-radius:12px;font-size:14px}
+@media (max-width:370px){ .sh h2{font-size:16px} .dhero{grid-template-columns:minmax(0,1fr)} .rules{grid-template-columns:repeat(3,auto);justify-content:start;gap:4px 14px;padding-left:0} .rules h3{grid-column:1 / -1} .hero .total{font-size:38px} .dhero .days{font-size:52px} .ringrow{grid-template-columns:100px minmax(0,1fr)} .ring{width:100px;height:100px} .today-amt .v{font-size:38px} .tier-row{grid-template-columns:auto 64px auto 64px auto} }
 </style>
 </head>
 <body>
 <div class="app" id="app">
-  <header class="top">
-    <div><h1>投资账本</h1><p id="todayLine"></p></div>
-    <p class="hint" id="status">正在读取…</p>
-  </header>
-
-  <nav class="tabs" role="tablist" aria-label="页面">
-    <button type="button" role="tab" id="tab-today" data-tab="today" aria-selected="true">今天</button>
-    <button type="button" role="tab" id="tab-over" data-tab="over" aria-selected="false">总览</button>
-    <button type="button" role="tab" id="tab-set" data-tab="set" aria-selected="false">设置</button>
-  </nav>
-
   <main id="view"></main>
-
-  <p class="foot">内容只保存在这台设备上，不连接任何证券或基金账户，不提供投资建议。版本 <span id="ver"></span></p>
-  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  <p class="foot">内容只保存在这台设备上，不连接任何证券或基金账户，不提供投资建议 · 版本 <span id="ver"></span></p>
 </div>
+<nav class="tabbar" aria-label="页面"><div class="tabbar-in" role="tablist" id="tabbar"></div></nav>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
 <script>
 (function(){
@@ -195,7 +346,8 @@ function today(){ return ymd(new Date()); }
 function addDays(s, n){ var d = parseYmd(s); d.setDate(d.getDate() + n); return ymd(d); }
 function validDate(s){ return typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && ymd(parseYmd(s)) === s; }
 function mdCn(s){ var d = parseYmd(s); return (d.getMonth() + 1) + '月' + d.getDate() + '日'; }
-function dayCn(s){ return mdCn(s) + ' 周' + WEEK[parseYmd(s).getDay()]; }
+function ymdCn(s){ var d = parseYmd(s); return d.getFullYear() + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日'; }
+function wk(s){ return '周' + WEEK[parseYmd(s).getDay()]; }
 function isWeekend(s){ var g = parseYmd(s).getDay(); return g === 0 || g === 6; }
 function daysBetween(a, b){ return Math.round((parseYmd(b) - parseYmd(a)) / 86400000); }
 function weekStart(s){ var g = (parseYmd(s).getDay() + 6) % 7; return addDays(s, -g); }
@@ -216,31 +368,78 @@ function fmt(c, opt){
   /* big figures (¥10,000 and up) drop the cents; smaller ones keep them so sums still match */
   var a = Math.abs(c), dec = opt.big && a >= 1000000 ? 0 : (a % 100 ? 2 : 0);
   var s = (a / 100).toLocaleString('zh-CN', { minimumFractionDigits: dec, maximumFractionDigits: dec });
-  return (c < 0 ? '−' : opt.sign && c > 0 ? '+' : '') + '¥' + s;
+  return (c < 0 ? '−' : opt.sign && c > 0 ? '+' : '') + (opt.bare ? '' : '¥') + s;
 }
+function fix2(c){ return (c / 100).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function compact(c){ var y = c / 100, a = Math.abs(y); return a >= 1e8 ? (y / 1e8).toFixed(2).replace(/\.?0+$/, '') + '亿' : a >= 1e4 ? (y / 1e4).toFixed(a >= 1e5 ? 1 : 2).replace(/\.?0+$/, '') + '万' : String(Math.round(y)); }
 function plain(c){ return c == null ? '' : c % 100 ? (c / 100).toFixed(2) : String(c / 100); }
 function pct(x, d){ return (x < 0 ? '−' : x > 0 ? '+' : '') + Math.abs(x * 100).toFixed(d == null ? 2 : d) + '%'; }
 function toLevel(v){ v = String(v == null ? '' : v).replace(/[,，\s]/g, ''); if (!/^\d+(\.\d{1,4})?$/.test(v)) return null; var n = parseFloat(v); return n > 0 && n < 1e7 ? n : null; }
+function toPe(v){ v = String(v == null ? '' : v).replace(/[\s倍]/g, ''); if (!/^\d+(\.\d{1,2})?$/.test(v)) return null; var n = parseFloat(v); return n > 0 && n < 1000 ? n : null; }
 function lvl(n){ return n == null ? '—' : n.toLocaleString('zh-CN', { minimumFractionDigits: 0, maximumFractionDigits: 2 }); }
 function cls(c){ return c > 0 ? 'up' : c < 0 ? 'down' : ''; }
+function multText(m){ return (Math.round(m * 100) / 100) + '倍'; }
+
+/* ---------- icons (24px grid, stroked) ---------- */
+var P = {
+  book: '<path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5z"/><path d="M5 19.5A1.5 1.5 0 0 0 6.5 21H19v-3"/><path d="M9 7.5h6"/>',
+  sprout: '<path d="M12 21v-8"/><path d="M12 13c0-4.4 3-7 7.5-7 0 4.4-3 7-7.5 7z"/><path d="M12 15.5c0-3.6-2.4-5.5-6.5-5.5 0 3.6 2.4 5.5 6.5 5.5z"/>',
+  pyramid: '<path d="M12 3 2.8 20h18.4z"/><path d="M7.2 12h9.6"/><path d="M5 16h14"/>',
+  sliders: '<path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/>',
+  cal: '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+  calDots: '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4M8 14h.01M12 14h.01M16 14h.01M8 17h.01M12 17h.01"/>',
+  bars: '<path d="M6 20v-7M12 20V5M18 20v-10"/>',
+  bank: '<path d="M3 9.5 12 4l9 5.5z"/><path d="M5 10v8M9.7 10v8M14.3 10v8M19 10v8M3 20.5h18"/>',
+  wallet: '<rect x="3" y="6" width="18" height="13.5" rx="3"/><path d="M3 10h13.5a2 2 0 0 1 2 2v1a2 2 0 0 1-2 2H15"/><path d="M7 3.5h9"/>',
+  trend: '<path d="M3 17 9.5 10.5l4 4L21 7"/><path d="M15 7h6v6"/>',
+  drop: '<path d="M3 7l6.5 6.5 4-4L21 17"/><path d="M15 17h6v-6"/>',
+  flag: '<path d="M5.5 21V4"/><path d="M5.5 4.5h12l-2.5 4 2.5 4h-12z"/>',
+  stairs: '<path d="M3.5 19.5h4v-4h4v-4h4v-4h5"/>',
+  receipt: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6M9 16h3"/>',
+  trophy: '<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5.5a3 3 0 0 0 3 4M16 6h2.5a3 3 0 0 1-3 4M12 13v4M8.5 20.5h7M10 17h4v3.5h-4z"/>',
+  calc: '<rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 7.5h8M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01"/>',
+  history: '<path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1"/><path d="M3.5 4.5V9H8"/><path d="M12 7.5V12l3 2"/>',
+  pencil: '<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/>',
+  chev: '<path d="M9 6l6 6-6 6"/>',
+  chevL: '<path d="M15 6l-6 6 6 6"/>',
+  scan: '<path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16M8 12h8"/>',
+  gauge: '<path d="M4 18a8 8 0 1 1 16 0"/><path d="M12 18l4-5.5"/>',
+  zone: '<rect x="3" y="5" width="18" height="14" rx="3"/><path d="M15 12h3"/>',
+  up: '<path d="M3 16.5 9 10.5l3.5 3.5L21 6"/>',
+  times: '<path d="M7 7l10 10M17 7 7 17"/>',
+  check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  money: '<rect x="2.5" y="6" width="19" height="12" rx="2.5"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9.5v5M18 9.5v5"/>',
+  target: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r=".6"/>'
+};
+function ic(n, style){ return '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"' + (style ? ' style="' + style + '"' : '') + '>' + P[n] + '</svg>'; }
+function badge(n, color){ return '<span class="badge" style="background:' + color + '">' + ic(n) + '</span>'; }
 
 /* ---------- state ---------- */
-var APP_VERSION = '1.1.0';
+var APP_VERSION = '2.0.0';
 var LS_KEY = 'invest-book.v1', BK_KEY = 'invest-book.backupAt';
 var INDEX = { ndx: '纳斯达克100', spx: '标普500' };
-/* an example only: the owner sets their own rule in 设置 */
+var SHORT = { ndx: '纳指', spx: '标普' };
+/* examples only: the owner sets their own rule and valuation bands in 设置 */
 var DEFAULT_TIERS = [[0, 1], [5, 1.5], [8, 2], [12, 2.5], [20, 3]];
+var DEFAULT_CUTS = { ndx: [24, 31, 37, 43], spx: [18, 22, 26, 30] };
+var ZONES = ['低估区', '偏低估值区', '合理估值区', '偏高估值区', '高估区'];
+var DEFAULT_SLOGAN = '一步一步，走到目标';
 
 function blank(){
   return {
     indices: { ndx: { high: null, level: null, levelDate: null }, spx: { high: null, level: null, levelDate: null } },
     tiers: DEFAULT_TIERS.map(function(t){ return t.slice(); }),
     funds: [], entries: [], skipped: [],
-    cash: null, goal: null
+    cash: null, goal: null,
+    slogan: '', startDate: null, goalMonth: null, goalYear: null, yearStart: null,
+    pe: { ndx: null, spx: null }, peCuts: { ndx: DEFAULT_CUTS.ndx.slice(), spx: DEFAULT_CUTS.spx.slice() },
+    history: [], days: {}
   };
 }
 var state = blank();
-var ui = { tab: 'today', snap: null, pasteBox: false, howto: false, editFund: null, addFund: false, editValue: null, confirmDel: null, showAll: false, manual: false, confirmUndo: false, confirmDelFund: false };
+var ui = { tab: 'book', calcTab: 'calc', calcIdx: null, pop: false, snapOpen: false, snap: null, pasteBox: false, howto: false,
+  editFund: null, addFund: false, editValue: null, confirmDel: null, showAll: false, manual: false, confirmUndo: false, confirmDelFund: false,
+  editGoal: null, detail: null, calMonth: null, showAllDays: false, openDay: null };
 var pending = null;
 
 function cleanIndex(x){
@@ -257,9 +456,15 @@ function cleanTiers(t){
   for (var i = 1; i < out.length; i++) if (out[i][0] === out[i - 1][0]) return null;
   return out.slice(0, 8);
 }
+function cleanCuts(c){
+  if (!Array.isArray(c) || c.length !== 4) return null;
+  for (var i = 0; i < 4; i++){ if (!isFinite(c[i]) || c[i] <= 0 || c[i] >= 1000 || (i && c[i] <= c[i - 1])) return null; }
+  return c.map(Number);
+}
+var cents = function(v){ return Number.isInteger(v) && v >= 0 && v <= MAX ? v : null; };
 function cleanFund(f){
   if (!f || !S(f.name, 30)) return null;
-  var n = function(v){ return Number.isInteger(v) && v >= 0 && v <= MAX ? v : null; };
+  var n = cents;
   return {
     id: S(f.id, 40) || uid(), name: S(f.name, 30),
     index: INDEX[f.index] ? f.index : 'none',
@@ -276,6 +481,16 @@ function cleanEntry(e){
   if (!Number.isInteger(a) || a <= 0 || a > MAX) return null;
   return { id: S(e.id, 40) || uid(), date: e.date, fund: S(e.fund, 40), amt: a, ts: Number.isFinite(e.ts) ? e.ts : 0, plan: !!e.plan };
 }
+function cleanDay(d){
+  if (!d || typeof d !== 'object') return null;
+  var out = {}, any = false;
+  Object.keys(INDEX).forEach(function(k){
+    var x = d[k]; if (!x) return;
+    var l = toLevel(x.l), h = toLevel(x.h), m = isFinite(x.m) && x.m >= 0 && x.m <= 20 ? Number(x.m) : null;
+    if (l != null && h != null){ out[k] = { l: l, h: h, m: m }; any = true; }
+  });
+  return any ? out : null;
+}
 function cleanState(o){
   o = o || {};
   var s = blank();
@@ -287,6 +502,22 @@ function cleanState(o){
   s.skipped = Array.isArray(o.skipped) ? o.skipped.filter(validDate).slice(-60) : [];
   if (o.cash && Number.isInteger(o.cash.balance) && o.cash.balance >= 0 && Number.isFinite(o.cash.ts)) s.cash = { balance: o.cash.balance, ts: o.cash.ts };
   s.goal = Number.isInteger(o.goal) && o.goal > 0 ? o.goal : null;
+  s.slogan = S(o.slogan, 24);
+  s.startDate = validDate(o.startDate) ? o.startDate : null;
+  s.goalMonth = Number.isInteger(o.goalMonth) && o.goalMonth > 0 ? o.goalMonth : null;
+  s.goalYear = Number.isInteger(o.goalYear) && o.goalYear > 0 ? o.goalYear : null;
+  var y = o.yearStart;
+  if (y && Number.isInteger(y.year) && cents(y.assets) != null && cents(y.cost) != null) s.yearStart = { year: y.year, assets: y.assets, cost: y.cost };
+  Object.keys(INDEX).forEach(function(k){
+    var p = o.pe && o.pe[k];
+    s.pe[k] = p && toPe(p.v) != null && validDate(p.d) ? { v: toPe(p.v), d: p.d } : null;
+    s.peCuts[k] = cleanCuts(o.peCuts && o.peCuts[k]) || s.peCuts[k];
+  });
+  var seen = {};
+  s.history = (Array.isArray(o.history) ? o.history : []).filter(function(h){ return h && validDate(h.d) && cents(h.v) != null && cents(h.c) != null; })
+    .map(function(h){ return { d: h.d, v: h.v, c: h.c }; }).sort(function(a, b){ return a.d < b.d ? -1 : a.d > b.d ? 1 : 0; })
+    .reverse().filter(function(h){ if (seen[h.d]) return false; seen[h.d] = true; return true; }).reverse().slice(-500);
+  if (o.days && typeof o.days === 'object') Object.keys(o.days).filter(validDate).sort().slice(-500).forEach(function(d){ var c = cleanDay(o.days[d]); if (c) s.days[d] = c; });
   return s;
 }
 var loadFailed = false;
@@ -306,25 +537,25 @@ function drawdown(k){
   if (!x || x.high == null || x.level == null) return null;
   return Math.max(0, (x.high - x.level) / x.high);
 }
+function tierIndex(d){ var t = state.tiers, i = 0; for (var j = 0; j < t.length; j++) if (d * 100 >= t[j][0] - 1e-9) i = j; return i; }
 function tierFor(d){
-  var t = state.tiers, i = 0;
-  for (var j = 0; j < t.length; j++) if (d * 100 >= t[j][0] - 1e-9) i = j;
-  return { from: t[i][0], to: i + 1 < t.length ? t[i + 1][0] : null, mult: t[i][1] };
+  var t = state.tiers, i = tierIndex(d);
+  return { i: i, from: t[i][0], to: i + 1 < t.length ? t[i + 1][0] : null, mult: t[i][1] };
 }
-function tierName(tr){ return tr.to == null ? tr.from + '% 以上' : tr.from === 0 ? '不到 ' + tr.to + '%' : tr.from + '%–' + tr.to + '%'; }
+function tierName(tr){ return tr.to == null ? tr.from + '% 以上' : tr.from + '%-' + tr.to + '%'; }
 function planFor(f){
-  if (f.base == null) return { amt: 0, why: '还没设每天的基础金额', off: true };
+  if (f.base == null) return { amt: 0, why: '还没设每天的基础金额', off: true, mult: 1 };
   var mult = 1, why = '固定 ' + fmt(f.base);
   if (f.scale){
     var d = drawdown(f.index);
     if (d == null) why = INDEX[f.index] + '的高点或点位还没填，先按 1 倍';
-    else { var tr = tierFor(d); mult = tr.mult; why = '基础 ' + fmt(f.base) + ' × ' + mult + ' 倍'; }
+    else { mult = tierFor(d).mult; why = '基础 ' + fmt(f.base) + ' × ' + multText(mult); }
   }
   /* a fixed amount stays exact; a multiplied one is rounded to whole yuan */
   var amt = mult === 1 ? f.base : Math.round(f.base * mult / 100) * 100;
   if (f.limit != null && f.limit > 0 && amt > f.limit){ why += '，超过限购，按上限 ' + fmt(f.limit); amt = f.limit; }
-  if (amt === 0) return { amt: 0, why: mult === 0 ? '这一档的倍数是 0，今天不投' : why, off: true };
-  return { amt: amt, why: why, off: false };
+  if (amt === 0) return { amt: 0, why: mult === 0 ? '这一档的倍数是 0，今天不投' : why, off: true, mult: mult };
+  return { amt: amt, why: why, off: false, mult: mult };
 }
 function todayEntries(){ var t = today(); return state.entries.filter(function(e){ return e.date === t && e.plan; }); }
 function cashLeft(){
@@ -339,150 +570,419 @@ function investedFor(f, upto){
 }
 function baseOf(f){ return f.cost != null ? f.cost : investedFor(f, f.valueDate); }
 function gainOf(f){ return f.value == null ? null : f.value - baseOf(f); }
-
-/* ---------- header ---------- */
-function renderHeader(){
-  $('#todayLine').textContent = '今天 ' + dayCn(today());
-  $('#status').textContent = loadFailed ? '读取已有内容时出错' : '保存在这台设备上';
-  $$('.tabs button').forEach(function(b){ b.setAttribute('aria-selected', String(b.dataset.tab === ui.tab)); });
-}
-
-/* ---------- 今天 ---------- */
-function viewToday(){
-  var t = today();
-  if (!state.funds.length){
-    return '<section class="card hero"><p class="eyebrow">先做一次设置</p><h2 class="h2" style="font-size:20px">把你在定投的基金加进来</h2>'
-      + '<p class="hint">每只基金填每天的基础金额、限购，以及要不要跟着指数回撤多投。设置一次，以后每天打开只需要填一个点位。</p>'
-      + '<div class="actions"><button class="btn" type="button" data-go="set">去设置</button><button class="btn ghost" type="button" data-act="import">导入文件</button></div></section>';
-  }
-  var logged = todayEntries(), loggedSum = logged.reduce(function(a, e){ return a + e.amt; }, 0);
-  var weekend = isWeekend(t), skipped = state.skipped.indexOf(t) >= 0;
-  var plans = state.funds.map(function(f){ return { f: f, p: planFor(f) }; });
-  var total = plans.reduce(function(a, x){ return a + x.p.amt; }, 0);
-  var used = {}; state.funds.forEach(function(f){ if (f.scale) used[f.index] = true; });
-
-  var idxHtml = Object.keys(INDEX).filter(function(k){ return used[k]; }).map(function(k){
-    var x = state.indices[k], d = drawdown(k), facts = '';
-    if (x.high == null) facts = '<span>高点还没填，在“设置”里填</span>';
-    else {
-      facts = '<span>高点 <b class="num">' + lvl(x.high) + '</b></span>';
-      if (d != null){
-        var tr = tierFor(d);
-        facts += '<span>回撤 <b class="num">' + (d * 100).toFixed(2) + '%</b></span><span class="chip' + (tr.mult > 1 ? ' hot' : '') + '">' + tierName(tr) + ' 档 · ' + tr.mult + ' 倍</span>';
-        if (x.level > x.high) facts += '<span>比高点还高。<button class="link" type="button" data-act="newhigh" data-k="' + k + '">把高点改成 ' + lvl(x.level) + '</button></span>';
-      }
-    }
-    var stale = x.levelDate && x.levelDate !== t ? '<p class="hint">用的是 ' + mdCn(x.levelDate) + ' 的点位，今天的还没填。</p>' : '';
-    return '<div class="idx"><div class="idx-row"><b>' + INDEX[k] + '</b><label class="sr" for="lv-' + k + '">' + INDEX[k] + '现在的点位</label><input class="inp" type="text" inputmode="decimal" id="lv-' + k + '" data-level="' + k + '" placeholder="现在的点位" value="' + (x.level != null ? x.level : '') + '"></div><div class="idx-facts">' + facts + '</div>' + stale + '</div>';
-  }).join('');
-
-  var head, body, actions = '';
-  if (logged.length){
-    head = '<p class="eyebrow">' + dayCn(t) + ' · 今天已记下</p><p class="big num">' + fmt(loggedSum) + '</p>';
-    body = '<ul class="plan">' + logged.map(function(e){ var f = fundById(e.fund); return '<li><span class="nm">' + esc(f ? f.name : '已删除的基金') + '</span><span class="amt">' + fmt(e.amt) + '</span></li>'; }).join('') + '</ul>';
-    actions = '<div class="done-box"><i></i><span>实际金额不一样的话，到“总览”的记录里改。</span></div><p><button class="link danger" type="button" data-act="undo">' + (ui.confirmUndo ? '再点一次，撤销今天的记录' : '撤销今天的记录') + '</button></p>';
-  } else if (weekend || skipped){
-    head = '<p class="eyebrow">' + dayCn(t) + '</p><p class="big" style="font-size:34px">' + (weekend ? '周末不定投' : '今天不投') + '</p>';
-    body = '<p class="hint">' + (weekend ? '基金周末不交易。下面是按最新点位算出的下个交易日金额，供参考。' : '已标记今天不投。') + '</p>' + planList(plans) + '<p class="hint">合计 ' + fmt(total) + '</p>';
-    if (skipped) actions = '<p><button class="link" type="button" data-act="unskip">取消“今天不投”</button></p>';
-  } else {
-    head = '<p class="eyebrow">' + dayCn(t) + ' · 今天定投合计</p><p class="big num">' + fmt(total) + '</p>';
-    body = planList(plans);
-    actions = '<div class="actions"><button class="btn full" type="button" data-act="log"' + (total ? '' : ' disabled') + '>按这个投了，记下来</button><button class="btn ghost" type="button" data-act="skip">今天不投</button></div>';
-  }
-  var cl = cashLeft(), cashHtml = '';
-  if (cl != null){
-    var per = logged.length ? loggedSum : total;
-    cashHtml = '<p class="hint">定投备用金还剩 <b class="num">' + fmt(cl) + '</b>' + (per > 0 && cl > 0 ? '，按每天 ' + fmt(per) + ' 算，还够约 ' + Math.floor(cl / per) + ' 个交易日。' : cl <= 0 ? '，已经用完了。' : '。') + '</p>';
-  }
-  return '<section class="card hero" aria-label="今天">' + head + idxHtml + body + actions + cashHtml + '</section>';
-}
-function planList(plans){
-  return '<ul class="plan">' + plans.map(function(x){
-    return '<li><span class="nm">' + esc(x.f.name) + '</span><span class="amt' + (x.p.off ? ' off' : '') + '">' + (x.p.off ? '—' : fmt(x.p.amt)) + '</span><span class="why">' + esc(x.p.why) + '</span></li>';
-  }).join('') + '</ul>';
-}
 function fundById(id){ for (var i = 0; i < state.funds.length; i++) if (state.funds[i].id === id) return state.funds[i]; return null; }
+function scaledIdx(){ var u = []; state.funds.forEach(function(f){ if (f.scale && u.indexOf(f.index) < 0) u.push(f.index); }); return u; }
+function zoneOf(k, v){ var c = state.peCuts[k]; for (var i = 0; i < 4; i++) if (v < c[i]) return i; return 4; }
 
-/* ---------- 总览 ---------- */
-function ringSvg(p){
-  var r = 40, c = 2 * Math.PI * r, v = Math.max(0, Math.min(1, p));
-  return '<svg width="96" height="96" viewBox="0 0 96 96" aria-hidden="true"><circle class="ring-bg" cx="48" cy="48" r="' + r + '" stroke-width="9"></circle><circle class="ring-fg" cx="48" cy="48" r="' + r + '" stroke-width="9" stroke-dasharray="' + (c * v) + ' ' + c + '"></circle></svg>';
-}
-function viewOver(){
-  var t = today(), funds = state.funds;
-  var invested = funds.reduce(function(a, f){ return a + investedFor(f); }, 0);
-  var withV = funds.filter(function(f){ return f.value != null; });
+/* what I own: fund values as last updated, and what was put in for them */
+function book(){
+  var funds = state.funds, withV = funds.filter(function(f){ return f.value != null; });
   var value = withV.reduce(function(a, f){ return a + f.value; }, 0);
   var base = withV.reduce(function(a, f){ return a + baseOf(f); }, 0);
-  var gain = value - base, rate = base > 0 ? gain / base : 0;
-  var oldest = withV.map(function(f){ return f.valueDate; }).sort()[0];
-  var ws = weekStart(t), ms = t.slice(0, 8) + '01', ys = t.slice(0, 5) + '01-01';
-  var sumFrom = function(from){ return state.entries.reduce(function(a, e){ return e.date >= from && e.date <= t ? a + e.amt : a; }, 0); };
-  var dates = {}; state.entries.forEach(function(e){ dates[e.date] = true; });
-  var dlist = Object.keys(dates).sort(), first = dlist[0];
+  var invested = funds.reduce(function(a, f){ return a + investedFor(f); }, 0);
+  return { funds: funds, withV: withV, value: value, base: base, invested: invested, gain: value - base, rate: base > 0 ? (value - base) / base : 0,
+    assets: withV.length ? value : invested, oldest: withV.map(function(f){ return f.valueDate; }).sort()[0] || null };
+}
+function recordHistory(){
+  var b = book(); if (!b.withV.length) return;
+  var t = today();
+  state.history = state.history.filter(function(h){ return h.d !== t; });
+  state.history.push({ d: t, v: b.value, c: b.base });
+  if (state.history.length > 500) state.history = state.history.slice(-500);
+}
+function yearStartFor(y){
+  if (state.yearStart && state.yearStart.year === y) return { assets: state.yearStart.assets, cost: state.yearStart.cost, src: 'set' };
+  var before = state.history.filter(function(h){ return h.d < y + '-01-01'; }).pop();
+  if (before) return { assets: before.v, cost: before.c, src: 'history', d: before.d };
+  return { assets: 0, cost: 0, src: 'none' };
+}
+function sumFrom(from, to){ return state.entries.reduce(function(a, e){ return e.date >= from && e.date <= to ? a + e.amt : a; }, 0); }
+function entryDates(){ var o = {}; state.entries.forEach(function(e){ o[e.date] = (o[e.date] || 0) + e.amt; }); return o; }
+function dayMult(d){ var x = state.days[d]; if (!x) return null; var m = null; Object.keys(x).forEach(function(k){ if (x[k].m != null) m = Math.max(m == null ? 0 : m, x[k].m); }); return m; }
+function startDate(){ var d = Object.keys(entryDates()).sort()[0]; return state.startDate && (!d || state.startDate < d) ? state.startDate : (d || state.startDate); }
 
-  var h = snapCard() + '<div class="tiles">';
-  if (withV.length){
-    h += '<div class="tile wide"><span class="k">当前市值</span><span class="v num">' + fmt(value, { big: true }) + '</span><span class="s">' + (withV.length < funds.length ? funds.length - withV.length + ' 只基金还没填市值，没算在内 · ' : '') + '最早一只更新于 ' + mdCn(oldest) + '</span></div>'
-      + '<div class="tile"><span class="k">收益</span><span class="v num ' + cls(gain) + '">' + fmt(gain, { sign: true, big: true }) + '</span><span class="s">' + (withV.some(function(f){ return f.cost != null; }) ? '截图里的持仓收益' : '市值减去对应的投入') + '</span></div>'
-      + '<div class="tile"><span class="k">收益率</span><span class="v num ' + cls(gain) + '">' + pct(rate) + '</span><span class="s">没有年化</span></div>';
-  } else {
-    h += '<div class="tile wide"><span class="k">当前市值</span><span class="v" style="font-size:18px;font-weight:600">还没填</span><span class="s">在下面的基金表里点“市值”，填基金 app 里显示的持有金额</span></div>';
+/* ---------- pieces ---------- */
+function ring(p, opt){
+  opt = opt || {};
+  var r = 46, c = 2 * Math.PI * r, v = Math.max(0, Math.min(1, p)), id = 'rg' + Math.random().toString(36).slice(2, 7);
+  var stroke = 'stroke:' + (opt.color ? opt.color : 'url(#' + id + ')');
+  return '<svg viewBox="0 0 110 110" aria-hidden="true"><defs><linearGradient id="' + id + '" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--blue)"/><stop offset="1" style="stop-color:var(--violet)"/></linearGradient>'
+    + '<filter id="' + id + 'g" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="3"/></filter></defs>'
+    + '<circle cx="55" cy="55" r="' + r + '" fill="none" style="stroke:var(--tile)" stroke-width="' + (opt.w || 10) + '"/>'
+    + (opt.glow && v > 0 ? '<circle cx="55" cy="55" r="' + r + '" fill="none" style="' + stroke + '" stroke-width="' + (opt.w || 10) + '" stroke-linecap="round" stroke-dasharray="' + (c * v) + ' ' + c + '" transform="rotate(-90 55 55)" opacity=".35" filter="url(#' + id + 'g)"/>' : '')
+    + (v > 0 ? '<circle cx="55" cy="55" r="' + r + '" fill="none" style="' + stroke + '" stroke-width="' + (opt.w || 10) + '" stroke-linecap="round" stroke-dasharray="' + (c * v) + ' ' + c + '" transform="rotate(-90 55 55)"/>' : '')
+    + '</svg>';
+}
+function scene(){
+  return '<svg class="scene" viewBox="0 0 400 230" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs>'
+    + '<linearGradient id="skyG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--h-sky1)"/><stop offset="1" style="stop-color:var(--h-sky2)"/></linearGradient>'
+    + '<radialGradient id="glowG"><stop offset="0" style="stop-color:var(--h-glow)"/><stop offset="1" style="stop-color:var(--h-glow);stop-opacity:0"/></radialGradient>'
+    + '<linearGradient id="fadeG" x1="0" y1="0" x2="1" y2="0"><stop offset="0" style="stop-color:var(--h-sky2);stop-opacity:.82"/><stop offset=".55" style="stop-color:var(--h-sky2);stop-opacity:0"/></linearGradient>'
+    + '<linearGradient id="mistG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--h-sky2);stop-opacity:0"/><stop offset="1" style="stop-color:var(--h-sky2);stop-opacity:.9"/></linearGradient></defs>'
+    + '<rect width="400" height="230" fill="url(#skyG)"/>'
+    + '<circle cx="312" cy="78" r="70" fill="url(#glowG)"/><circle cx="312" cy="78" r="21" style="fill:var(--h-sun)"/>'
+    + '<path style="fill:var(--h-m1)" d="M0 150 38 128 66 138 104 104 140 126 176 108 214 124 252 92 290 116 330 98 370 114 400 102V230H0z"/>'
+    + '<rect y="112" width="400" height="56" fill="url(#mistG)"/>'
+    + '<path style="fill:var(--h-m2)" d="M0 172 46 150 84 160 132 136 180 156 226 140 270 158 318 136 362 150 400 140V230H0z"/>'
+    + '<rect y="146" width="400" height="44" fill="url(#mistG)"/>'
+    + '<path style="fill:var(--h-tree)" d="M352 132l5-13 5 13zM362 136l6-16 6 16zM373 133l5-12 5 12zM384 137l5-14 5 14z" opacity=".8"/>'
+    + '<path style="fill:var(--h-near);stroke:var(--h-edge)" stroke-width="1" d="M96 230C176 214 238 186 284 162 316 145 346 136 400 132V230z"/>'
+    + '<path style="stroke:var(--h-step)" fill="none" stroke-width="3" stroke-linecap="round" stroke-dasharray=".1 9" d="M150 226C196 208 236 192 262 176S308 150 326 142"/>'
+    + '<rect width="240" height="230" fill="url(#fadeG)"/>'
+    + '<path style="stroke:var(--h-ink-2)" stroke-width="1.6" d="M332 141V114"/><path fill="#E5484D" d="M332 114h15l-4 5 4 5h-15z"/>'
+    + '</svg>';
+}
+function emptyOr(cond, html, text){ return cond ? html : '<p class="empty">' + text + '</p>'; }
+
+/* tap a mark to read its value */
+function hideTip(){ $$('.tip').forEach(function(t){ t.remove(); }); }
+function showTip(el){
+  hideTip();
+  var box = el.closest('.viz'); if (!box) return;
+  var br = box.getBoundingClientRect(), r = el.getBoundingClientRect();
+  var tip = document.createElement('div'); tip.className = 'tip';
+  tip.innerHTML = el.getAttribute('data-tip');
+  box.appendChild(tip);
+  var x = r.left + r.width / 2 - br.left, half = tip.offsetWidth / 2;
+  x = Math.max(half, Math.min(br.width - half, x));
+  tip.style.left = x + 'px'; tip.style.top = Math.max(tip.offsetHeight, r.top - br.top - 6) + 'px';
+}
+
+/* ---------- 账本 ---------- */
+function viewBook(){
+  var t = today(), b = book(), y = Number(t.slice(0, 4));
+  var h = '<section class="hero" aria-label="总资产">' + scene()
+    + '<h1>投资账本</h1><p class="slogan">' + esc(state.slogan || DEFAULT_SLOGAN) + '</p>'
+    + '<p class="datepill">' + ic('cal') + '<span>' + t + '</span></p>'
+    + '<p class="lab">' + (b.withV.length ? '总资产（元）' : '累计投入（元）') + '</p>'
+    + '<p class="total">' + fmt(b.assets, { big: true }) + '</p>'
+    + '<p class="sub">' + (b.withV.length ? (b.withV.length < b.funds.length ? (b.funds.length - b.withV.length) + ' 只基金还没填市值，没算在内 · ' : '') + '市值更新于 ' + mdCn(b.oldest) : b.funds.length ? '还没填市值，先按投入算。在下面“我的持仓”里更新。' : '先到“设置”里把基金加进来。') + '</p>'
+    + '</section>';
+
+  h += todayStrip();
+
+  /* financial freedom */
+  var g = state.goal, p = g ? b.assets / g : 0;
+  h += '<section class="card"><div class="sh">' + badge('bars', 'var(--blue)') + '<h2>财务自由度</h2><button class="pill plain" type="button" data-act="edit-goal" data-k="free" style="color:var(--blue);font-weight:600">' + ic('pencil') + '编辑目标</button></div>';
+  if (ui.editGoal === 'free') h += goalForm('free', '自由目标', g, '想攒到多少，算作财务自由');
+  h += '<div class="ringrow"><div class="ring">' + ring(p, { glow: true }) + '<div class="t"><b>' + (g ? (p * 100).toFixed(1) + '%' : '—') + '</b><small>自由度</small></div></div>'
+    + '<dl class="kv"><dt>当前资产</dt><dd>' + fmt(b.assets, { big: true }) + '</dd><dt>自由目标</dt><dd>' + (g ? fmt(g, { big: true }) : '还没设') + '</dd><dt>距离目标</dt><dd class="hl">' + (g ? fmt(Math.max(0, g - b.assets), { big: true }) : '—') + '</dd></dl></div></section>';
+
+  /* this year */
+  var ys = yearStartFor(y), grow = b.assets - ys.assets;
+  var putIn = b.base - ys.cost, yGain = (b.assets - b.base) - (ys.assets - ys.cost);
+  var yRate = ys.assets > 0 ? yGain / ys.assets : putIn > 0 ? yGain / putIn : null;
+  var gRate = ys.assets > 0 ? grow / ys.assets : null;
+  h += '<section class="card"><div class="sh">' + badge('bank', 'var(--blue)') + '<h2>账户概览</h2><span class="hint">' + y + ' 年</span></div>';
+  if (ui.editGoal === 'ystart') h += yearForm(y, ys);
+  h += '<div class="tiles">'
+    + '<button class="tile" type="button" data-act="edit-goal" data-k="ystart"><span class="k">' + ic('wallet', 'color:var(--blue)') + '年初金额</span><span class="v num">' + fmt(ys.assets, { big: true }) + '</span><span class="s">' + (ys.src === 'set' ? '你填的，点这里改' : ys.src === 'history' ? '按 ' + mdCn(ys.d) + ' 的记录，点这里改' : '按今年才开始算，不对就点这里改') + '</span></button>'
+    + '<div class="tile"><span class="k">' + ic('trend', 'color:var(--up)') + '增长金额</span><span class="v num ' + cls(grow) + '">' + fmt(grow, { sign: true, big: true }) + '</span><span class="s">现在 − 年初</span></div>'
+    + '<div class="tile"><span class="k">' + ic('up', 'color:var(--up)') + '年度收益率</span><span class="v num ' + (yRate == null ? '' : cls(yGain)) + '">' + (yRate == null ? '—' : pct(yRate)) + '</span><span class="s">' + (ys.assets > 0 ? '今年赚的 ÷ 年初金额' : '今年赚的 ÷ 今年投入') + '</span></div>'
+    + '<div class="tile"><span class="k">' + ic('bars', 'color:var(--up)') + '资产增长率</span><span class="v num ' + (gRate == null ? '' : cls(grow)) + '">' + (gRate == null ? '—' : pct(gRate)) + '</span><span class="s">' + (gRate == null ? '年初是 0，算不出增长率' : '含新投入的钱') + '</span></div>'
+    + '</div></section>';
+
+  h += holdingsCard(b);
+  h += trendCard();
+  return h;
+}
+function todayStrip(){
+  var t = today(), logged = todayEntries(), sum = logged.reduce(function(a, e){ return a + e.amt; }, 0);
+  var total = state.funds.reduce(function(a, f){ return a + planFor(f).amt; }, 0), title, sub;
+  if (!state.funds.length){ title = '今天定投多少'; sub = '先在设置里添加基金'; }
+  else if (logged.length){ title = '今天已记下 ' + fmt(sum); sub = mdCn(t) + ' ' + wk(t) + ' · 点开看明细'; }
+  else if (isWeekend(t)){ title = '周末不定投'; sub = '下个交易日参考 ' + fmt(total); }
+  else if (state.skipped.indexOf(t) >= 0){ title = '今天不投'; sub = '已标记'; }
+  else { title = '今天应投 ' + fmt(total); sub = '还没记 · 去计算器填今天的点位'; }
+  return '<button class="strip" type="button" data-tab="calc">' + '<span class="badge">' + ic('pyramid') + '</span><span class="t"><b class="num">' + title + '</b><span>' + sub + '</span></span>' + ic('chev') + '</button>';
+}
+function goalForm(k, label, val, hint){
+  return '<form class="inline" data-form="goal" data-k="' + k + '" novalidate><div class="field"><label for="goal-in">' + label + '</label><div class="unit"><span>¥</span><input class="inp" type="text" inputmode="decimal" id="goal-in" value="' + plain(val) + '" placeholder="留空表示不设"></div></div>'
+    + (hint ? '<p class="hint">' + hint + '</p>' : '') + '<p class="msg" id="goal-msg"></p><div class="actions"><button class="btn small" type="submit">保存</button><button class="btn ghost small" type="button" data-act="edit-goal" data-k="">取消</button></div></form>';
+}
+function yearForm(y, ys){
+  return '<form class="inline" data-form="ystart" novalidate><p class="hint">' + y + ' 年 1 月 1 日那天：基金一共值多少，其中投进去的本金是多少。今年才开始投就都填 0。</p><div class="pair">'
+    + '<div class="field"><label for="ys-a">年初金额</label><div class="unit"><span>¥</span><input class="inp" type="text" inputmode="decimal" id="ys-a" value="' + plain(ys.assets) + '"></div></div>'
+    + '<div class="field"><label for="ys-c">年初时的本金</label><div class="unit"><span>¥</span><input class="inp" type="text" inputmode="decimal" id="ys-c" value="' + plain(ys.cost) + '"></div></div></div>'
+    + '<p class="msg" id="ys-msg"></p><div class="actions"><button class="btn small" type="submit">保存</button><button class="btn ghost small" type="button" data-act="edit-goal" data-k="">取消</button></div></form>';
+}
+function holdingsCard(b){
+  var h = '<section class="card"><div class="sh">' + badge('wallet', 'var(--s3)') + '<h2>我的持仓</h2><button class="pill" type="button" data-act="snap-open">' + ic('scan') + '截图更新</button></div>';
+  if (ui.snapOpen || ui.snap) h += snapPanel();
+  if (!b.funds.length) return h + '<p class="empty">还没有基金。到“设置”里添加，或者直接点“截图更新”从持仓截图里识别。</p></section>';
+  if (b.withV.length){
+    h += '<div class="sum3"><div><span>持仓收益</span><b class="' + cls(b.gain) + '">' + fmt(b.gain, { sign: true, big: true }) + '</b></div><div><span>收益率</span><b class="' + cls(b.gain) + '">' + pct(b.rate) + '</b></div><div><span>投入本金</span><b>' + fmt(b.base, { big: true }) + '</b></div></div>';
+    if (b.value > 0) h += '<div class="alloc" role="img" aria-label="持仓占比">' + b.funds.map(function(f, i){ return f.value ? '<i style="width:' + (f.value / b.value * 100) + '%;background:var(--s' + (i % 6 + 1) + ')"></i>' : ''; }).join('') + '</div>';
   }
-  h += '<div class="tile"><span class="k">累计投入</span><span class="v num">' + fmt(invested, { big: true }) + '</span><span class="s">' + (funds.some(function(f){ return f.cost != null; }) ? '截图里的持仓成本，加上之后记的' : '含开始前已投的本金') + '</span></div>'
-    + '<div class="tile"><span class="k">今年投入</span><span class="v num">' + fmt(sumFrom(ys), { big: true }) + '</span><span class="s">本月 ' + fmt(sumFrom(ms), { big: true }) + ' · 本周 ' + fmt(sumFrom(ws), { big: true }) + '</span></div>'
-    + '</div>';
+  h += '<ul class="funds">' + b.funds.map(function(f, i){
+    var g = gainOf(f), share = b.value && f.value ? f.value / b.value : 0;
+    var row = '<li><span class="dot" style="background:var(--s' + (i % 6 + 1) + ')"></span><span class="nm">' + esc(f.name) + '<small>' + (f.value != null ? '占 ' + (share * 100).toFixed(1) + '% · ' : '') + '投入 ' + fmt(investedFor(f), { big: true }) + (f.value != null ? ' · <button class="linkbtn" type="button" data-act="value" data-id="' + f.id + '" style="font-size:12px">改市值</button>' : '') + '</small></span>'
+      + '<span class="val">' + (f.value != null ? '<b>' + fmt(f.value, { big: true }) + '</b><span class="' + cls(g) + '">' + fmt(g, { sign: true, big: true }) + '</span>' : '<button class="linkbtn" type="button" data-act="value" data-id="' + f.id + '">填市值</button>') + '</span>';
+    if (ui.editValue === f.id) row += '<div class="edit"><form class="inline" data-form="value" data-id="' + f.id + '" novalidate><div class="field"><label for="v-amt">' + esc(f.name) + '现在的持有金额</label><div class="unit"><span>¥</span><input class="inp" type="text" inputmode="decimal" id="v-amt" value="' + plain(f.value) + '" placeholder="基金 app 里显示的金额"></div></div><p class="hint">按今天 ' + mdCn(today()) + ' 记。' + (f.cost != null ? '持仓成本会按截图之后记的定投顺延。' : '收益会和今天及以前的投入比较。') + '</p><p class="msg" id="v-msg"></p><div class="actions"><button class="btn small" type="submit">保存</button><button class="btn ghost small" type="button" data-act="cancel-value">取消</button></div></form></div>';
+    return row + '</li>';
+  }).join('') + '</ul>';
+  if (b.withV.some(function(f){ return investedFor(f) !== baseOf(f); })) h += '<p class="hint">“投入”含市值更新之后才记的买入；市值和收益还是更新那天的，下次更新后就对上了。</p>';
+  return h + '</section>';
+}
+function trendCard(){
+  var pts = state.history.slice(-120);
+  var h = '<section class="card"><div class="sh">' + badge('trend', 'var(--violet)') + '<h2>资产走势</h2></div>';
+  if (pts.length < 2) return h + '<p class="empty">每次更新市值（截图或手填），这里就多一个点。更新过两天以后，就能看到总资产和投入本金的走势。</p></section>';
+  var W = 340, H = 170, L = 40, R = 8, T = 10, B = 24;
+  var lo = Infinity, hi = -Infinity;
+  pts.forEach(function(p){ lo = Math.min(lo, p.v, p.c); hi = Math.max(hi, p.v, p.c); });
+  var span = hi - lo || Math.max(100, hi * .1), raw = span * 1.3 / 3, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  var stepV = [1, 2, 2.5, 5, 10].map(function(m){ return m * mag; }).filter(function(v){ return v >= raw; })[0];
+  lo = Math.max(0, Math.floor((lo - span * .1) / stepV) * stepV); hi = lo + stepV * Math.max(3, Math.ceil((hi + span * .05 - lo) / stepV));
+  var nT = Math.round((hi - lo) / stepV);
+  var t0 = parseYmd(pts[0].d).getTime(), t1 = parseYmd(pts[pts.length - 1].d).getTime(), tw = t1 - t0 || 1;
+  var X = function(d){ return L + (parseYmd(d).getTime() - t0) / tw * (W - L - R); };
+  var Y = function(v){ return T + (1 - (v - lo) / (hi - lo)) * (H - T - B); };
+  var line = function(key){ return pts.map(function(p, i){ return (i ? 'L' : 'M') + X(p.d).toFixed(1) + ' ' + Y(p[key]).toFixed(1); }).join(''); };
+  var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="总资产和投入本金的走势，从 ' + mdCn(pts[0].d) + ' 到 ' + mdCn(pts[pts.length - 1].d) + '"><defs><linearGradient id="areaG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--s1);stop-opacity:.22"/><stop offset="1" style="stop-color:var(--s1);stop-opacity:0"/></linearGradient></defs>';
+  for (var g = 0; g <= nT; g++){ var v = lo + stepV * g, yy = Y(v); s += '<line class="grid" x1="' + L + '" x2="' + (W - R) + '" y1="' + yy + '" y2="' + yy + '"/><text class="ax" x="' + (L - 6) + '" y="' + (yy + 3.5) + '" text-anchor="end">' + compact(v) + '</text>'; }
+  s += '<path d="' + line('v') + 'L' + X(pts[pts.length - 1].d) + ' ' + (H - B) + 'L' + X(pts[0].d) + ' ' + (H - B) + 'Z" fill="url(#areaG)"/>';
+  s += '<path d="' + line('c') + '" fill="none" style="stroke:var(--ink-2)" stroke-width="1.6" stroke-dasharray="4 4"/>';
+  s += '<path d="' + line('v') + '" fill="none" style="stroke:var(--s1)" stroke-width="2" stroke-linejoin="round"/>';
+  var last = pts[pts.length - 1];
+  s += '<circle cx="' + X(last.d) + '" cy="' + Y(last.v) + '" r="4" style="fill:var(--s1);stroke:var(--card)" stroke-width="2"/>';
+  s += '<text class="ax" x="' + L + '" y="' + (H - 6) + '">' + mdCn(pts[0].d) + '</text><text class="ax" x="' + (W - R) + '" y="' + (H - 6) + '" text-anchor="end">' + mdCn(last.d) + '</text>';
+  pts.forEach(function(p, i){
+    var x0 = i ? (X(pts[i - 1].d) + X(p.d)) / 2 : L, x1 = i < pts.length - 1 ? (X(p.d) + X(pts[i + 1].d)) / 2 : W - R;
+    s += '<rect class="hit" x="' + x0 + '" y="' + T + '" width="' + Math.max(1, x1 - x0) + '" height="' + (H - T - B) + '" data-tip="' + esc(mdCn(p.d) + '<br>总资产 <b>' + fmt(p.v, { big: true }) + '</b><br>投入本金 <b>' + fmt(p.c, { big: true }) + '</b><br>收益 <b>' + fmt(p.v - p.c, { sign: true, big: true }) + '</b>') + '"/>';
+  });
+  s += '</svg>';
+  return h + '<div class="legend"><span><i style="border-color:var(--s1)"></i>总资产</span><span><i class="dash" style="border-color:var(--ink-2)"></i>投入本金</span></div><div class="viz">' + s + '</div><p class="hint">点图上的位置看那天的数。</p></section>';
+}
 
-  if (state.goal){
-    var have = withV.length ? value : invested, p = have / state.goal;
-    h += '<section class="card"><div class="ringrow"><div class="ring">' + ringSvg(p) + '<div class="t num">' + (p * 100).toFixed(1) + '%<small>目标进度</small></div></div>'
-      + '<dl class="kv"><dt>' + (withV.length ? '当前市值' : '累计投入') + '</dt><dd>' + fmt(have, { big: true }) + '</dd><dt>目标</dt><dd>' + fmt(state.goal, { big: true }) + '</dd><dt>还差</dt><dd>' + fmt(Math.max(0, state.goal - have), { big: true }) + '</dd></dl></div></section>';
-  }
+/* ---------- 定投 ---------- */
+function viewDca(){
+  var t = today(), y = t.slice(0, 4), m = t.slice(0, 7);
+  var ys = y + '-01-01', ms = m + '-01', ws = weekStart(t);
+  var start = startDate(), days = start ? daysBetween(start, t) + 1 : 0;
+  var baseSum = state.funds.reduce(function(a, f){ return a + (f.base || 0); }, 0);
+  var firstUp = state.tiers.filter(function(r){ return r[1] > 1; })[0];
+  var h = '<section class="dhero" aria-label="已定投天数"><svg class="deco" viewBox="0 0 200 140" preserveAspectRatio="xMaxYMax meet" aria-hidden="true"><path d="M20 130h30v-22h30V86h30V64h30V42h40" fill="none" style="stroke:var(--green)" stroke-opacity=".14" stroke-width="10" stroke-linejoin="round"/></svg>'
+    + '<div><p class="flag">' + ic('flag') + '坚持定投 · 长期持有</p><p class="k">已定投</p><p class="days num">' + days + '<small>天</small></p><p class="from">' + (start ? '从 ' + ymdCn(start) + ' 开始' : '记下第一笔，就从那天开始算') + '</p></div>'
+    + '<div class="rules"><h3>我的规则</h3>'
+    + '<p><b>每天</b><span>' + (baseSum ? fmt(baseSum) + ' 起' : '还没设') + '</span></p>'
+    + '<p><b>加倍</b><span>' + (firstUp ? '回撤 ' + firstUp[0] + '% 起' : '不加倍') + '</span></p>'
+    + '<p><b>基金</b><span>' + state.funds.length + ' 只</span></p></div></section>';
 
-  h += '<section class="card"><div class="head"><h2>定投</h2><span class="hint">' + (first ? '从 ' + mdCn(first) + ' 开始，第 ' + (daysBetween(first, t) + 1) + ' 天' : '') + '</span></div>'
-    + '<dl class="kv"><dt>记了几天</dt><dd>' + dlist.length + ' 天</dd><dt>一共几笔</dt><dd>' + state.entries.length + ' 笔</dd></dl></section>';
+  h += '<div class="tiles solo">'
+    + '<div class="tile"><span class="k">' + ic('stairs', 'color:var(--blue)') + '年度投入</span><span class="v num">' + fmt(sumFrom(ys, t), { big: true }) + '</span></div>'
+    + '<div class="tile"><span class="k">' + ic('cal', 'color:var(--green)') + '本月投入</span><span class="v num">' + fmt(sumFrom(ms, t), { big: true }) + '</span></div>'
+    + '<div class="tile"><span class="k">' + ic('calDots', 'color:var(--orange)') + '本周投入</span><span class="v num">' + fmt(sumFrom(ws, t), { big: true }) + '</span></div>'
+    + '<div class="tile"><span class="k">' + ic('receipt', 'color:var(--purple)') + '定投笔数</span><span class="v num">' + state.entries.length + ' <small style="font-size:17px">笔</small></span></div></div>';
 
-  h += '<section class="card"><h2>每只基金</h2>';
-  if (!funds.length) h += '<p class="empty">还没有基金，先到“设置”里添加。</p>';
-  else {
-    h += '<div class="tablewrap"><table><thead><tr><th>基金</th><th class="r">投入</th><th class="r">市值</th><th class="r">收益</th></tr></thead><tbody>';
-    funds.forEach(function(f){
-      var inv = investedFor(f), g = gainOf(f);
-      h += '<tr class="fundrow"><td>' + esc(f.name) + '</td><td class="r n">' + fmt(inv, { big: true }) + '</td><td class="r n"><button class="link" type="button" data-act="value" data-id="' + f.id + '">' + (f.value != null ? fmt(f.value, { big: true }) : '填市值') + '</button></td><td class="r n ' + (g == null ? '' : cls(g)) + '">' + (g == null ? '—' : fmt(g, { sign: true, big: true })) + '</td></tr>';
-      if (ui.editValue === f.id){
-        h += '<tr><td colspan="4"><form class="inline" data-form="value" data-id="' + f.id + '" novalidate><div class="field"><label for="v-amt">' + esc(f.name) + '现在的持有金额</label><div class="unit"><span>¥</span><input class="inp" type="text" inputmode="decimal" id="v-amt" value="' + plain(f.value) + '" placeholder="基金 app 里显示的金额"></div></div><p class="hint">按今天 ' + mdCn(t) + ' 记。' + (f.cost != null ? '持仓成本会按截图之后记的定投顺延。' : '收益会和今天及以前的投入比较。') + '</p><p class="msg" id="v-msg"></p><div class="actions"><button class="btn small" type="submit">保存</button><button class="btn ghost small" type="button" data-act="cancel-value">取消</button></div></form></td></tr>';
-      }
-    });
-    h += '</tbody></table></div>';
-    if (withV.some(function(f){ return investedFor(f) !== baseOf(f); }))
-      h += '<p class="hint">“投入”含市值更新之后才记的买入；市值和收益还是更新那天的，下次更新后就对上了。</p>';
-  }
-  h += '</section>';
-
-  /* records */
-  var rows = state.entries.slice().sort(function(a, b){ return a.date < b.date ? 1 : a.date > b.date ? -1 : b.ts - a.ts; });
-  var shown = ui.showAll ? rows : rows.slice(0, 15);
-  h += '<section class="card"><div class="head"><h2>记录</h2><button class="link" type="button" data-act="manual">' + (ui.manual ? '收起' : '手动记一笔') + '</button></div>';
-  if (ui.manual && funds.length){
-    h += '<form class="inline" data-form="manual" novalidate><div class="pair"><div class="field"><label for="m-date">日期</label><input class="inp" type="date" id="m-date" value="' + t + '" max="' + t + '"></div>'
-      + '<div class="field"><label for="m-amt">金额</label><div class="unit"><span>¥</span><input class="inp" type="text" inputmode="decimal" id="m-amt"></div></div></div>'
-      + '<div class="field"><label for="m-fund">基金</label><select class="inp" id="m-fund">' + funds.map(function(f){ return '<option value="' + f.id + '">' + esc(f.name) + '</option>'; }).join('') + '</select></div>'
-      + '<p class="msg" id="m-msg"></p><div class="actions"><button class="btn small" type="submit">记下</button></div></form>';
-  }
-  if (!rows.length) h += '<p class="empty">还没有记录。在“今天”点“按这个投了，记下来”，这里就有了。</p>';
-  else {
-    h += '<div class="tablewrap"><table><thead><tr><th>日期</th><th>基金</th><th class="r">金额</th><th><span class="sr">操作</span></th></tr></thead><tbody>';
-    shown.forEach(function(e){
-      var f = fundById(e.fund);
-      var acts = ui.confirmDel === e.id ? '<button class="link danger" type="button" data-act="del" data-id="' + e.id + '">确认删除</button><button class="link" type="button" data-act="keep">不删</button>' : '<button class="link" type="button" data-act="ask" data-id="' + e.id + '">删</button>';
-      h += '<tr><td class="n">' + mdCn(e.date) + '</td><td>' + esc(f ? f.name : '已删除的基金') + '</td><td class="r n">' + fmt(e.amt) + '</td><td class="acts">' + acts + '</td></tr>';
-    });
-    h += '</tbody></table></div>' + (!ui.showAll && rows.length > 15 ? '<p><button class="link" type="button" data-act="all">显示全部 ' + rows.length + ' 笔</button></p>' : '');
+  h += progressCard('month', '月度定投进度', 'cal', 'var(--blue)', sumFrom(ms, t), state.goalMonth, ms, t);
+  h += progressCard('year', '年度定投统计', 'trophy', 'var(--green)', sumFrom(ys, t), state.goalYear, ys, t);
+  h += calendarCard();
+  h += recordsCard();
+  return h;
+}
+function progressCard(k, title, icon, color, done, goal, from, to){
+  var p = goal ? done / goal : 0, green = k === 'year';
+  var h = '<section class="card"><div class="sh">' + ic(icon, 'width:26px;height:26px;color:' + color) + '<h2>' + title + '</h2><button class="pill' + (green ? ' green' : '') + '" type="button" data-act="edit-goal" data-k="' + k + '">编辑目标</button><button class="pill plain" type="button" data-act="detail" data-k="' + k + '">明细' + ic('chev') + '</button></div>';
+  if (ui.editGoal === k) h += goalForm(k, (k === 'month' ? '每月' : '每年') + '定投目标', goal, '');
+  h += '<div class="prog"><div class="ring sm">' + ring(p, { color: color, w: 11 }) + '<div class="t"><b>' + (goal ? Math.round(p * 100) + '%' : '—') + '</b><small>已完成</small></div></div>'
+    + '<div><p class="done-k">已完成</p><p class="done-v num">' + fmt(done, { big: true }) + '</p><p class="goal">' + (goal ? '<span>目标 ' + fmt(goal, { big: true }) + '</span>' + (done >= goal ? '<b>已达成</b>' : '<span>还差 ' + fmt(goal - done, { big: true }) + '</span>') : '<span>还没设目标</span>') + '</p></div></div>';
+  if (k === 'year') h += monthBars(from.slice(0, 4));
+  if (ui.detail === k){
+    var rows = state.entries.filter(function(e){ return e.date >= from && e.date <= to; });
+    h += rows.length ? recList(rows, false) : '<p class="empty">这段时间还没有记录。</p>';
   }
   return h + '</section>';
 }
+function monthBars(y){
+  var vals = []; for (var i = 1; i <= 12; i++) vals.push(sumFrom(y + '-' + pad(i) + '-01', y + '-' + pad(i) + '-31'));
+  var max = Math.max.apply(null, vals);
+  if (!max) return '';
+  var W = 340, H = 120, T = 18, B = 20, bw = 18, step = (W - 8) / 12, cur = new Date().getMonth();
+  var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + y + ' 年每月定投金额">';
+  s += '<line class="grid" x1="0" x2="' + W + '" y1="' + (H - B) + '" y2="' + (H - B) + '"/>';
+  vals.forEach(function(v, i){
+    var x = 4 + step * i + (step - bw) / 2, hgt = v ? Math.max(4, v / max * (H - T - B)) : 0, yy = H - B - hgt;
+    if (v) s += '<path d="M' + x + ' ' + (H - B) + 'V' + (yy + 4) + 'Q' + x + ' ' + yy + ' ' + (x + 4) + ' ' + yy + 'H' + (x + bw - 4) + 'Q' + (x + bw) + ' ' + yy + ' ' + (x + bw) + ' ' + (yy + 4) + 'V' + (H - B) + 'Z" style="fill:var(--green)" opacity="' + (i === cur ? 1 : .55) + '"/>';
+    if (i === cur && v) s += '<text class="ax" x="' + (x + bw / 2) + '" y="' + (yy - 5) + '" text-anchor="middle" style="fill:var(--ink)">' + compact(v) + '</text>';
+    s += '<text class="ax" x="' + (x + bw / 2) + '" y="' + (H - 5) + '" text-anchor="middle">' + (i + 1) + '月</text>';
+    s += '<rect class="hit" x="' + (4 + step * i) + '" y="0" width="' + step + '" height="' + (H - B) + '" data-tip="' + esc((i + 1) + '月 <b>' + fmt(v, { big: true }) + '</b>') + '"/>';
+  });
+  return '<div class="viz">' + s + '</svg></div>';
+}
+function calendarCard(){
+  var t = today(), m = ui.calMonth || t.slice(0, 7), d0 = parseYmd(m + '-01'), dim = new Date(d0.getFullYear(), d0.getMonth() + 1, 0).getDate();
+  var by = entryDates(), vals = [], cnt = 0, sum = 0;
+  for (var i = 1; i <= dim; i++){ var v = by[m + '-' + pad(i)] || 0; vals.push(v); if (v){ cnt++; sum += v; } }
+  var max = Math.max.apply(null, vals.concat([1]));
+  var lead = (d0.getDay() + 6) % 7;
+  var h = '<section class="card"><div class="sh">' + ic('calDots', 'width:26px;height:26px;color:var(--orange)') + '<h2>定投日历</h2><span class="monthnav"><button type="button" data-act="cal" data-d="-1" aria-label="上个月">' + ic('chevL') + '</button><b>' + d0.getFullYear() + '年' + (d0.getMonth() + 1) + '月</b><button type="button" data-act="cal" data-d="1" aria-label="下个月"' + (m >= t.slice(0, 7) ? ' disabled style="opacity:.35"' : '') + '>' + ic('chev') + '</button></span></div>';
+  h += '<div class="viz"><div class="cal">' + ['一','二','三','四','五','六','日'].map(function(w){ return '<span>' + w + '</span>'; }).join('');
+  for (i = 0; i < lead; i++) h += '<i class="blank"></i>';
+  vals.forEach(function(v, j){
+    var d = m + '-' + pad(j + 1), mx = dayMult(d), lv = !v ? 0 : mx != null ? (mx <= 1 ? 1 : mx <= 1.5 ? 2 : mx <= 2 ? 3 : 4) : Math.min(4, 1 + Math.floor(v / max * 3.999));
+    h += '<i class="' + (lv ? 'h' + lv : '') + (d === t ? ' today' : '') + (isWeekend(d) ? ' we' : '') + '"' + (v ? ' data-tip="' + esc(mdCn(d) + ' <b>' + fmt(v) + '</b>' + (mx != null ? ' · ' + multText(mx) : '')) + '" role="img" aria-label="' + mdCn(d) + ' 投了 ' + fmt(v) + '"' : '') + '>' + (j + 1) + '</i>';
+  });
+  h += '</div></div><div class="sh" style="justify-content:space-between"><span class="hint">这个月投了 ' + cnt + ' 天，共 ' + fmt(sum, { big: true }) + '</span><span class="heatkey">1倍<i style="background:var(--heat1)"></i><i style="background:var(--heat2)"></i><i style="background:var(--heat3)"></i><i style="background:var(--heat4)"></i>多倍</span></div>';
+  return h + '</section>';
+}
+function recList(rows, withActs){
+  rows = rows.slice().sort(function(a, b){ return a.date < b.date ? 1 : a.date > b.date ? -1 : b.ts - a.ts; });
+  return '<ul class="recs">' + rows.map(function(e){
+    var f = fundById(e.fund);
+    var acts = !withActs ? '' : ui.confirmDel === e.id ? '<button class="link danger" type="button" data-act="del" data-id="' + e.id + '">确认删除</button><button class="link" type="button" data-act="keep">不删</button>' : '<button class="link" type="button" data-act="ask" data-id="' + e.id + '">删除</button>';
+    return '<li><span class="d">' + mdCn(e.date) + '<small>' + esc(f ? f.name : '已删除的基金') + '</small></span><span class="a">' + fmt(e.amt) + '</span>' + (withActs ? '<span class="x"><span>' + (e.plan ? '按计划' : '手动记的') + '</span>' + acts + '</span>' : '') + '</li>';
+  }).join('') + '</ul>';
+}
+function recordsCard(){
+  var t = today(), rows = state.entries;
+  var h = '<section class="card"><div class="sh">' + ic('receipt', 'width:26px;height:26px;color:var(--purple)') + '<h2>记录</h2><button class="pill" type="button" data-act="manual">' + (ui.manual ? '收起' : '手动记一笔') + '</button></div>';
+  if (ui.manual && state.funds.length){
+    h += '<form class="inline" data-form="manual" novalidate><div class="pair"><div class="field"><label for="m-date">日期</label><input class="inp" type="date" id="m-date" value="' + t + '" max="' + t + '"></div>'
+      + '<div class="field"><label for="m-amt">金额</label><div class="unit"><span>¥</span><input class="inp" type="text" inputmode="decimal" id="m-amt"></div></div></div>'
+      + '<div class="field"><label for="m-fund">基金</label><select class="inp" id="m-fund">' + state.funds.map(function(f){ return '<option value="' + f.id + '">' + esc(f.name) + '</option>'; }).join('') + '</select></div>'
+      + '<p class="msg" id="m-msg"></p><div class="actions"><button class="btn small" type="submit">记下</button></div></form>';
+  }
+  if (!rows.length) return h + '<p class="empty">还没有记录。在“计算器”里点“按这个投了，记下来”，这里就有了。</p></section>';
+  var by = {}; rows.forEach(function(e){ (by[e.date] = by[e.date] || []).push(e); });
+  var dates = Object.keys(by).sort().reverse(), shown = ui.showAll ? dates : dates.slice(0, 10);
+  h += '<ul class="recs">' + shown.map(function(d){
+    var list = by[d], sum = list.reduce(function(a, e){ return a + e.amt; }, 0), open = ui.openDay === d;
+    var names = list.map(function(e){ var f = fundById(e.fund); return (f ? f.name : '已删除的基金'); });
+    var out = '<li><button class="d" type="button" data-act="day" data-d="' + d + '" aria-expanded="' + open + '" style="border:0;background:none;padding:0;text-align:left">' + mdCn(d) + '<small>' + wk(d) + ' · ' + list.length + ' 笔</small></button><span class="a">' + fmt(sum) + '</span>';
+    if (!open) return out + '<span class="x"><span class="one">' + esc(names.join('、')) + '</span></span></li>';
+    out += '<span class="x" style="display:grid;gap:6px">' + list.map(function(e){
+      var f = fundById(e.fund);
+      var acts = ui.confirmDel === e.id ? '<button class="link danger" type="button" data-act="del" data-id="' + e.id + '">确认删除</button> <button class="link" type="button" data-act="keep">不删</button>' : '<button class="link" type="button" data-act="ask" data-id="' + e.id + '">删除</button>';
+      return '<span style="display:flex;gap:10px;align-items:baseline"><span style="flex:1;min-width:0">' + esc(f ? f.name : '已删除的基金') + (e.plan ? '' : '（手动）') + '</span><b class="num" style="color:var(--ink)">' + fmt(e.amt) + '</b>' + acts + '</span>';
+    }).join('') + '</span>';
+    return out + '</li>';
+  }).join('') + '</ul>';
+  if (!ui.showAll && dates.length > 10) h += '<p><button class="link" type="button" data-act="all">显示全部 ' + dates.length + ' 天</button></p>';
+  return h + '</section>';
+}
 
+/* ---------- 计算器 ---------- */
+function viewCalc(){
+  var t = today(), used = scaledIdx();
+  if (!ui.calcIdx || (used.length && used.indexOf(ui.calcIdx) < 0)) ui.calcIdx = used[0] || 'ndx';
+  var k = ui.calcIdx, nDays = Object.keys(entryDates()).length;
+  var h = '<header class="calc-title"><h1>' + ic('pyramid') + SHORT[k] + '金字塔定投计算器</h1><p>' + ymdCn(t) + ' ' + wk(t) + '</p></header>'
+    + '<div class="seg" role="tablist"><button type="button" role="tab" data-ctab="calc" aria-selected="' + (ui.calcTab === 'calc') + '">' + ic('calc') + '定投计算器</button><button type="button" role="tab" data-ctab="review" aria-selected="' + (ui.calcTab === 'review') + '">' + ic('history') + '定投复盘' + (nDays ? '<span class="cnt">' + nDays + '</span>' : '') + '</button></div>';
+  return h + (ui.calcTab === 'review' ? viewReview() : viewCalculator(k));
+}
+function viewCalculator(k){
+  var t = today(), x = state.indices[k], used = scaledIdx();
+  var h = '';
+  if (used.length > 1) h += '<div class="chips">' + used.map(function(i){ return '<button type="button" data-act="cidx" data-k="' + i + '" aria-pressed="' + (i === k) + '">' + INDEX[i] + '</button>'; }).join('') + '</div>';
+  var pe = state.pe[k], peV = pe ? pe.v : null, z = peV != null ? zoneOf(k, peV) : null;
+  h += '<div class="pair" style="gap:12px">'
+    + '<div class="cfield"><label class="lab" for="c-pe">' + ic('bars') + 'PE-TTM 估值</label><div class="cbox"><input class="inp" type="text" inputmode="decimal" id="c-pe" value="' + (peV != null ? peV : '') + '" placeholder="选填"><span class="suf">倍</span></div></div>'
+    + '<div class="cfield"><span class="lab">' + ic('zone') + '估值区间</span><div class="zone ' + (z == null ? 'none' : 'z' + z) + '" aria-live="polite">' + (z == null ? '填 PE 后显示' : ZONES[z]) + '</div></div>'
+    + '<div class="cfield"><label class="lab" for="c-high">' + ic('up') + '基准高点</label><div class="cbox"><input class="inp" type="text" inputmode="decimal" id="c-high" value="' + (x.high != null ? x.high : '') + '" placeholder="历史高点"></div></div>'
+    + '<div class="cfield"><label class="lab" for="c-level">' + ic('up') + '当前点位</label><div class="cbox"><input class="inp" type="text" inputmode="decimal" id="c-level" value="' + (x.level != null && x.levelDate === t ? x.level : '') + '" placeholder="' + (x.level != null ? '上次 ' + x.level : '今天的点位') + '"></div></div>'
+    + '</div>'
+    + (pe && pe.d !== t ? '<p class="hint">PE 是 ' + mdCn(pe.d) + ' 填的。</p>' : '')
+    + '<p class="msg" id="c-msg"></p>'
+    + '<button class="go" type="button" data-act="calc">' + ic('calc') + '开始计算</button>';
+  h += resultCard(k);
+  h += pyramidCard(k);
+  h += '<p class="hint" style="text-align:center">估值区间和跌多投规则都是示例，在“设置”里改成你自己的。这里只按你的规则算数，不构成投资建议。</p>';
+  return h;
+}
+function resultCard(k){
+  var t = today(), x = state.indices[k], d = drawdown(k);
+  var funds = state.funds, logged = todayEntries(), loggedSum = logged.reduce(function(a, e){ return a + e.amt; }, 0);
+  var plans = funds.map(function(f){ return { f: f, p: planFor(f) }; }), total = plans.reduce(function(a, q){ return a + q.p.amt; }, 0);
+  var baseK = funds.reduce(function(a, f){ return f.scale && f.index === k && f.base ? a + f.base : a; }, 0);
+  var tr = d != null ? tierFor(d) : null, weekend = isWeekend(t), skipped = state.skipped.indexOf(t) >= 0;
+  var stale = x.level != null && x.levelDate !== t;
+  var h = '<section class="res' + (ui.pop ? ' pop' : '') + '" aria-label="计算结果"><div class="pair" style="gap:12px">'
+    + '<div class="ctile"><span class="k">' + ic('drop') + '回撤幅度</span><span class="v">' + (d != null ? (d * 100).toFixed(2) + '%' : '—') + '</span></div>'
+    + '<div class="ctile"><span class="k">' + ic('zone') + '基础金额</span><span class="v">' + (baseK ? fix2(baseK) : '—') + '</span></div></div>'
+    + '<div class="ctile"><span class="k">' + ic('up') + '回撤倍数</span><div class="row"><span class="v">' + (tr ? multText(tr.mult) : '—') + '</span>' + (tr ? '<span class="tier">当前档位：' + tierName(tr) + '档</span>' : '') + '</div></div>';
+  if (x.high != null && x.level != null && x.level > x.high) h += '<p class="hint">当前点位比高点还高。<button class="link" type="button" data-act="newhigh" data-k="' + k + '" style="color:var(--orange)">把高点改成 ' + lvl(x.level) + '</button></p>';
+  if (stale) h += '<p class="hint">用的是 ' + mdCn(x.levelDate) + ' 的点位，今天的还没填。</p>';
+  if (!funds.length){
+    h += '<div class="today-amt"><span class="k">' + ic('money') + '今日定投金额</span><span class="v">—</span></div><p class="hint">先到“设置”里把基金加进来，这里才会算出每只基金投多少。</p>';
+    return h + '</section>';
+  }
+  if (logged.length){
+    h += '<div class="today-amt"><span class="k">' + ic('money') + '今日已记下</span><span class="v">' + fix2(loggedSum) + '</span></div>'
+      + '<ul class="brk">' + logged.map(function(e){ var f = fundById(e.fund); return '<li><span class="nm">' + esc(f ? f.name : '已删除的基金') + '</span><span class="amt">' + fmt(e.amt) + '</span></li>'; }).join('') + '</ul>'
+      + '<div class="donebox">' + ic('check') + '今天已经记下了。实际金额不一样，到“定投”页的记录里改。</div>'
+      + '<p><button class="link danger" type="button" data-act="undo">' + (ui.confirmUndo ? '再点一次，撤销今天的记录' : '撤销今天的记录') + '</button></p>';
+  } else {
+    h += '<div class="today-amt"><span class="k">' + ic('money') + (weekend ? '下个交易日' : skipped ? '今天不投' : '今日定投金额') + '</span><span class="v">' + fix2(total) + '</span></div>';
+    h += '<ul class="brk">' + plans.map(function(q){ return '<li><span class="nm">' + esc(q.f.name) + '</span><span class="amt' + (q.p.off ? ' off' : '') + '">' + (q.p.off ? '—' : fmt(q.p.amt)) + '</span><span class="why">' + esc(q.p.why) + '</span></li>'; }).join('') + '</ul>';
+    if (weekend) h += '<p class="hint">周末基金不交易，上面是按最新点位算的下个交易日金额，供参考。</p>';
+    else if (skipped) h += '<p><button class="link" type="button" data-act="unskip">取消“今天不投”</button></p>';
+    else h += '<div class="actions"><button class="btn light full" type="button" data-act="log"' + (total ? '' : ' disabled') + '>按这个投了，记下来</button><button class="btn dim" type="button" data-act="skip">今天不投</button></div>';
+  }
+  var cl = cashLeft();
+  if (cl != null){ var per = logged.length ? loggedSum : total; h += '<p class="hint">定投备用金还剩 <b class="num">' + fmt(cl) + '</b>' + (per > 0 && cl > 0 ? '，按每天 ' + fmt(per) + ' 算，还够约 ' + Math.floor(cl / per) + ' 个交易日。' : cl <= 0 ? '，已经用完了。' : '。') + '</p>'; }
+  return h + '</section>';
+}
+function pyramidCard(k){
+  var t = state.tiers, n = t.length, d = drawdown(k), cur = d != null ? tierIndex(d) : -1;
+  var W = 320, rh = 34, gap = 4, H = n * (rh + gap) + 4, top = 120;
+  var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="跌多投规则金字塔，' + (cur >= 0 ? '现在在第 ' + (cur + 1) + ' 档' : '还没有回撤数据') + '"><defs><linearGradient id="pyrOn" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#FF8A00"/><stop offset="1" stop-color="#FFC312"/></linearGradient></defs>';
+  for (var i = 0; i < n; i++){
+    var y0 = 2 + i * (rh + gap), w0 = top + (W - top) * i / n, w1 = top + (W - top) * (i + 1) / n, c = W / 2;
+    var on = i === cur, from = t[i][0], to = i + 1 < n ? t[i + 1][0] : null;
+    s += '<path class="lvl' + (on ? ' on' : '') + '" d="M' + (c - w0 / 2) + ' ' + y0 + 'H' + (c + w0 / 2) + 'L' + (c + w1 / 2) + ' ' + (y0 + rh) + 'H' + (c - w1 / 2) + 'Z"/>';
+    s += '<text x="' + c + '" y="' + (y0 + rh / 2 + 4.5) + '" text-anchor="middle"' + (on ? ' class="on"' : '') + '>' + (to == null ? '≥' + from + '%' : from + '–' + to + '%') + ' · ' + multText(t[i][1]) + '</text>';
+  }
+  s += '</svg>';
+  return '<section class="card pyr"><div class="sh">' + ic('pyramid', 'width:24px;height:24px;color:var(--orange)') + '<h2>跌多投金字塔</h2><button class="pill plain" type="button" data-tab="set">改规则' + ic('chev') + '</button></div>' + s
+    + '<p class="hint">越往下回撤越深、倍数越大。' + (cur >= 0 ? '现在回撤 ' + (d * 100).toFixed(2) + '%，在高亮的那一档。' : '填了高点和今天的点位，就会高亮你现在在哪一档。') + '</p></section>';
+}
+function viewReview(){
+  var by = entryDates(), dates = Object.keys(by).sort(), total = dates.reduce(function(a, d){ return a + by[d]; }, 0);
+  var boosted = dates.filter(function(d){ var x = state.days[d]; return x && Object.keys(x).some(function(k){ return x[k].m > 1; }); }).length;
+  var h = '<div class="pair" style="gap:12px">'
+    + '<div class="ctile"><span class="k">' + ic('cal') + '定投天数</span><span class="v">' + dates.length + '</span></div>'
+    + '<div class="ctile"><span class="k">' + ic('money') + '累计定投</span><span class="v">' + fix2(total).replace(/\.00$/, '') + '</span></div>'
+    + '<div class="ctile"><span class="k">' + ic('up') + '加倍的天数</span><span class="v">' + boosted + '</span></div>'
+    + '<div class="ctile"><span class="k">' + ic('zone') + '平均每天</span><span class="v">' + (dates.length ? fix2(Math.round(total / dates.length)) : '—') + '</span></div></div>';
+  if (!dates.length) return h + '<p class="empty" style="text-align:center">还没有记录。每天在计算器里点“记下来”，这里会按天列出点位、回撤、倍数和金额。</p>';
+  var k = ui.calcIdx || 'ndx', pts = dates.filter(function(d){ return state.days[d] && state.days[d][k]; }).slice(-60);
+  if (pts.length >= 2) h += reviewDrawdown(k, pts);
+  h += reviewBars(dates.slice(-30), by);
+  var list = dates.slice().reverse(), shown = ui.showAllDays ? list : list.slice(0, 30);
+  h += '<section class="card"><div class="sh">' + ic('history', 'width:24px;height:24px;color:var(--orange)') + '<h2>每天的记录</h2></div><ul class="recs">' + shown.map(function(d){
+    var x = state.days[d], bits = [];
+    if (x) Object.keys(x).forEach(function(i){ var q = x[i], dd = Math.max(0, (q.h - q.l) / q.h); bits.push(SHORT[i] + ' ' + lvl(q.l) + ' · 回撤 ' + (dd * 100).toFixed(2) + '%' + (q.m != null ? ' · ' + multText(q.m) : '')); });
+    return '<li><span class="d">' + mdCn(d) + '<small>' + wk(d) + '</small></span><span class="a">' + fmt(by[d]) + '</span><span class="x"><span>' + (bits.length ? esc(bits.join('；')) : '这天没记点位') + '</span></span></li>';
+  }).join('') + '</ul>' + (!ui.showAllDays && list.length > 30 ? '<p><button class="link" type="button" data-act="alldays">显示全部 ' + list.length + ' 天</button></p>' : '') + '</section>';
+  return h;
+}
+function reviewDrawdown(k, pts){
+  var W = 340, H = 140, L = 34, R = 8, T = 12, B = 22;
+  var vals = pts.map(function(d){ var q = state.days[d][k]; return Math.max(0, (q.h - q.l) / q.h) * 100; });
+  var hi = Math.max(5, Math.ceil(Math.max.apply(null, vals) / 5) * 5);
+  var X = function(i){ return L + (pts.length === 1 ? 0 : i / (pts.length - 1)) * (W - L - R); }, Y = function(v){ return T + v / hi * (H - T - B); };
+  var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + INDEX[k] + '每次定投时的回撤">';
+  for (var g = 0; g <= 2; g++){ var v = hi * g / 2; s += '<line class="grid" x1="' + L + '" x2="' + (W - R) + '" y1="' + Y(v) + '" y2="' + Y(v) + '"/><text class="ax" x="' + (L - 6) + '" y="' + (Y(v) + 3.5) + '" text-anchor="end">' + (g ? '−' : '') + v + '%</text>'; }
+  var path = vals.map(function(v, i){ return (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(v).toFixed(1); }).join('');
+  s += '<path d="' + path + 'L' + X(vals.length - 1) + ' ' + T + 'L' + X(0) + ' ' + T + 'Z" fill="#FFB340" opacity=".12"/>';
+  s += '<path d="' + path + '" fill="none" stroke="#FFB340" stroke-width="2" stroke-linejoin="round"/>';
+  s += '<text class="ax" x="' + L + '" y="' + (H - 5) + '">' + mdCn(pts[0]) + '</text><text class="ax" x="' + (W - R) + '" y="' + (H - 5) + '" text-anchor="end">' + mdCn(pts[pts.length - 1]) + '</text>';
+  pts.forEach(function(d, i){ var w = (W - L - R) / Math.max(1, pts.length - 1); s += '<rect class="hit" x="' + (X(i) - w / 2) + '" y="' + T + '" width="' + w + '" height="' + (H - T - B) + '" data-tip="' + esc(mdCn(d) + ' 回撤 <b>' + vals[i].toFixed(2) + '%</b>') + '"/>'; });
+  return '<section class="card"><div class="sh">' + ic('drop', 'width:24px;height:24px;color:#FFB340') + '<h2>' + SHORT[k] + '回撤走势</h2></div><div class="viz">' + s + '</svg></div><p class="hint">每个点是一次定投那天的回撤，越往下跌得越深。</p></section>';
+}
+function reviewBars(dates, by){
+  var W = 340, H = 130, T = 14, B = 20, n = dates.length, step = (W - 4) / Math.max(n, 8), bw = Math.max(3, Math.min(18, step - 3));
+  var max = Math.max.apply(null, dates.map(function(d){ return by[d]; }));
+  var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="最近 ' + n + ' 次定投的金额"><line class="grid" x1="0" x2="' + W + '" y1="' + (H - B) + '" y2="' + (H - B) + '"/>';
+  dates.forEach(function(d, i){
+    var v = by[d], x = 2 + step * i + (step - bw) / 2, hgt = Math.max(3, v / max * (H - T - B)), yy = H - B - hgt, r = Math.min(4, bw / 2);
+    s += '<path d="M' + x + ' ' + (H - B) + 'V' + (yy + r) + 'Q' + x + ' ' + yy + ' ' + (x + r) + ' ' + yy + 'H' + (x + bw - r) + 'Q' + (x + bw) + ' ' + yy + ' ' + (x + bw) + ' ' + (yy + r) + 'V' + (H - B) + 'Z" fill="#FF9500"/>';
+    s += '<rect class="hit" x="' + (2 + step * i) + '" y="0" width="' + step + '" height="' + (H - B) + '" data-tip="' + esc(mdCn(d) + ' <b>' + fmt(v) + '</b>') + '"/>';
+  });
+  s += '<text class="ax" x="2" y="' + (H - 5) + '">' + mdCn(dates[0]) + '</text><text class="ax" x="' + (W - 2) + '" y="' + (H - 5) + '" text-anchor="end">' + mdCn(dates[n - 1]) + '</text>';
+  return '<section class="card"><div class="sh">' + ic('bars', 'width:24px;height:24px;color:#FF9500') + '<h2>每次定投金额</h2></div><div class="viz">' + s + '</svg></div><p class="hint">最近 ' + n + ' 次，点柱子看金额。</p></section>';
+}
 
 /* ---------- screenshot text → holdings ---------- */
 /* The text comes from iPhone Live Text (实况文本). Labels and numbers may arrive label-number-label-number,
@@ -551,11 +1051,11 @@ function tokenize(lines){
 }
 /* each number goes to the oldest label still waiting for a number of its kind; "--" fills any waiting label */
 function assign(tokens){
-  var pending = [], got = {};
+  var pend = [], got = {};
   tokens.forEach(function(t){
-    if (t.label){ pending.push({ type: t.label, done: false }); if (pending.length > 10) pending.shift(); return; }
-    for (var j = 0; j < pending.length; j++){
-      var p = pending[j];
+    if (t.label){ pend.push({ type: t.label, done: false }); if (pend.length > 10) pend.shift(); return; }
+    for (var j = 0; j < pend.length; j++){
+      var p = pend[j];
       if (!p.done && (t.cls === 'X' || ACCEPT[p.type][t.cls])){ p.done = true; if (t.cls !== 'X' && !(p.type in got)) got[p.type] = t.v; break; }
     }
   });
@@ -594,21 +1094,13 @@ function signedCents(v){
   if (!/^-?\d+(\.\d{1,2})?$/.test(v)) return null;
   return Math.round(parseFloat(v) * 100);
 }
-function snapCard(){
-  var h = '<section class="card"><div class="head"><h2>用截图更新持仓</h2><button class="link" type="button" data-act="howto">' + (ui.howto ? '收起' : '怎么把截图变成文字') + '</button></div>';
-  if (ui.howto){
-    h += '<div style="display:grid;gap:8px;font-size:14px"><p><b>设置一次快捷指令（推荐）</b></p><ol style="padding-left:20px;list-style:decimal;display:grid;gap:4px">'
-      + '<li>打开“快捷指令”app，点右上角“+”新建。</li><li>添加操作“从图像中提取文本”。</li><li>再添加操作“拷贝至剪贴板”。</li>'
-      + '<li>在这个快捷指令的设置里打开“在共享表单中显示”，接收类型选“图像”。</li><li>命名为“导入投资账本”。</li></ol>'
-      + '<p>以后：在相册打开持仓截图 → 分享 → 选“导入投资账本” → 回到这里点“粘贴截图文字”。</p>'
-      + '<p><b>不想设置也行</b>：在相册打开截图，点右下角的识别文字按钮（实况文本），长按文字选“全选”，拷贝，回来粘贴。</p>'
-      + '<p class="hint">文字识别在你的手机上完成，截图不会上传。不同 iOS 版本里按钮名字可能略有不同。</p></div>';
-  }
+function snapPanel(){
+  var h = '<div class="inline" style="gap:10px">';
   if (ui.snap){
     var opts = function(sel){ return state.funds.map(function(f){ return '<option value="' + f.id + '"' + (f.id === sel ? ' selected' : '') + '>' + esc(f.name) + '</option>'; }).join('') + '<option value="new"' + (sel === 'new' ? ' selected' : '') + '>新建一只基金</option>'; };
     h += '<form data-form="snap" novalidate style="display:grid;gap:12px"><p class="hint">认出 ' + ui.snap.length + ' 只基金。请核对数字，不对的直接改。</p>'
       + ui.snap.map(function(r, i){
-        return '<div class="inline"><p class="li-sub">截图里：' + esc(r.name || '没认出基金名称') + '</p>'
+        return '<div style="display:grid;gap:10px;padding:12px;border-radius:14px;background:var(--card)"><p class="li-sub">截图里：' + esc(r.name || '没认出基金名称') + '</p>'
           + '<div class="field"><label for="s-fund-' + i + '">对应你的</label><select class="inp" id="s-fund-' + i + '">' + opts(r.fundId) + '</select></div>'
           + '<div class="pair"><div class="field"><label for="s-val-' + i + '">资产</label><div class="unit"><span>¥</span><input class="inp" type="text" inputmode="decimal" id="s-val-' + i + '" value="' + plain(r.value) + '"></div></div>'
           + '<div class="field"><label for="s-gain-' + i + '">持仓收益</label><div class="unit"><span>¥</span><input class="inp" type="text" inputmode="text" id="s-gain-' + i + '" value="' + (r.gain != null ? (r.gain < 0 ? '-' : '') + plain(Math.abs(r.gain)) : '') + '" placeholder="亏损前面加 -"></div></div></div>'
@@ -619,10 +1111,19 @@ function snapCard(){
       }).join('')
       + '<p class="msg" id="s-msg"></p><div class="actions"><button class="btn" type="submit">确认更新</button><button class="btn ghost" type="button" data-act="snap-cancel">取消</button></div></form>';
   } else {
-    h += '<p class="hint">把基金 app 里的持仓页截图变成文字粘贴进来，自动填资产和持仓收益。还在确认中的买入，截图里通常还没有，下次截图会补上。</p><div class="actions"><button class="btn" type="button" data-act="paste">粘贴截图文字</button></div>';
-    if (ui.pasteBox) h += '<div class="field"><label for="s-text">没能直接读到剪贴板。长按下面的框，选“粘贴”，再点“识别”</label><textarea class="inp text" id="s-text" rows="5" style="height:auto;padding:10px 11px"></textarea></div><div class="actions"><button class="btn ghost" type="button" data-act="recognize">识别</button></div>';
+    h += '<p class="hint">把基金 app 持仓页的截图变成文字，粘贴进来，自动填资产和持仓收益。还在确认中的买入，截图里通常还没有，下次截图会补上。</p>'
+      + '<div class="actions"><button class="btn small" type="button" data-act="paste">粘贴截图文字</button><button class="btn ghost small" type="button" data-act="howto">' + (ui.howto ? '收起说明' : '怎么变成文字') + '</button></div>';
+    if (ui.pasteBox) h += '<div class="field"><label for="s-text">没能直接读到剪贴板。长按下面的框，选“粘贴”，再点“识别”</label><textarea class="inp" id="s-text" rows="5"></textarea></div><div class="actions"><button class="btn ghost small" type="button" data-act="recognize">识别</button></div>';
+    if (ui.howto){
+      h += '<div style="display:grid;gap:8px;font-size:14px"><p><b>设置一次快捷指令（推荐）</b></p><ol style="padding-left:20px;list-style:decimal;display:grid;gap:4px">'
+        + '<li>打开“快捷指令”app，点右上角“+”新建。</li><li>添加操作“从图像中提取文本”。</li><li>再添加操作“拷贝至剪贴板”。</li>'
+        + '<li>在这个快捷指令的设置里打开“在共享表单中显示”，接收类型选“图像”。</li><li>命名为“导入投资账本”。</li></ol>'
+        + '<p>以后：在相册打开持仓截图 → 分享 → 选“导入投资账本” → 回到这里点“粘贴截图文字”。</p>'
+        + '<p><b>不想设置也行</b>：在相册打开截图，点右下角的识别文字按钮（实况文本），长按文字选“全选”，拷贝，回来粘贴。</p>'
+        + '<p class="hint">文字识别在你的手机上完成，截图不会上传。不同 iOS 版本里按钮名字可能略有不同。</p></div>';
+    }
   }
-  return h + '</section>';
+  return h + '</div>';
 }
 function runParse(text){
   var res = parseHoldings(text);
@@ -648,7 +1149,8 @@ function applySnap(){
     f.value = u.value; f.valueDate = t; f.cost = u.value - u.gain; f.snapTs = ts;
     if (u.limit != null) f.limit = u.limit;
   });
-  ui.snap = null;
+  ui.snap = null; ui.snapOpen = false;
+  recordHistory();
   if (save()) toast('已更新 ' + ups.length + ' 只基金');
   render();
 }
@@ -660,7 +1162,7 @@ function fundForm(f){
     + '<div class="field"><label for="f-name">基金名称</label><input class="inp text" type="text" id="f-name" maxlength="30" value="' + esc(f.name) + '" placeholder="和基金 app 里的名字一样最好"></div>'
     + '<div class="pair"><div class="field"><label for="f-index">跟踪的指数</label><select class="inp" id="f-index"><option value="ndx"' + (f.index === 'ndx' ? ' selected' : '') + '>纳斯达克100</option><option value="spx"' + (f.index === 'spx' ? ' selected' : '') + '>标普500</option><option value="none"' + (f.index === 'none' ? ' selected' : '') + '>其他</option></select></div>'
     + '<div class="field"><label for="f-base">每天基础金额</label><div class="unit"><span>¥</span><input class="inp" type="text" inputmode="decimal" id="f-base" value="' + plain(f.base) + '"></div></div></div>'
-    + '<label class="check" for="f-scale"><input type="checkbox" id="f-scale"' + (f.scale ? ' checked' : '') + '><span>跟着指数回撤多投（按下面的跌多投规则乘倍数）</span></label>'
+    + '<label class="check" for="f-scale"><input type="checkbox" id="f-scale"' + (f.scale ? ' checked' : '') + '><span>跟着指数回撤多投（按跌多投规则乘倍数）</span></label>'
     + '<div class="pair"><div class="field"><label for="f-limit">每天限购 <span class="hint">没有就留空</span></label><div class="unit"><span>¥</span><input class="inp" type="text" inputmode="decimal" id="f-limit" value="' + plain(f.limit) + '"></div></div>'
     + '<div class="field"><label for="f-prior">用这个之前已投的本金</label><div class="unit"><span>¥</span><input class="inp" type="text" inputmode="decimal" id="f-prior" value="' + (f.prior ? plain(f.prior) : '') + '" placeholder="0"></div></div></div>'
     + (f.cost != null ? '<p class="hint">已经用截图更新过：持仓成本按截图里的算，“之前已投的本金”不再参与计算。</p>' : '')
@@ -669,9 +1171,10 @@ function fundForm(f){
     + '</form>';
 }
 function viewSet(){
-  var h = '<section class="card"><div class="head"><h2>定投的基金</h2>' + (ui.addFund || ui.editFund ? '' : '<button class="link" type="button" data-act="add-fund">添加</button>') + '</div>';
+  var h = '<h1 style="font-size:26px;font-weight:800;padding:4px 2px 0">设置</h1>';
+  h += '<section class="card"><div class="sh"><h2>定投的基金</h2>' + (ui.addFund || ui.editFund ? '' : '<button class="pill" type="button" data-act="add-fund">添加</button>') + '</div>';
   if (ui.addFund) h += fundForm(null);
-  h += '<ul class="list">' + state.funds.map(function(f){
+  h += '<ul class="setlist">' + state.funds.map(function(f){
     if (ui.editFund === f.id) return '<li>' + fundForm(f) + '</li>';
     var bits = [INDEX[f.index] || '其他指数', f.base != null ? '每天 ' + fmt(f.base) : '还没设金额', f.scale ? '跟着回撤多投' : '固定金额'];
     if (f.limit) bits.push('限购 ' + fmt(f.limit));
@@ -680,32 +1183,44 @@ function viewSet(){
     return '<li><div class="li-top"><b>' + esc(f.name) + '</b><button class="link" type="button" data-act="edit-fund" data-id="' + f.id + '">改</button></div><p class="li-sub">' + esc(bits.join(' · ')) + '</p></li>';
   }).join('') + '</ul>' + (!state.funds.length && !ui.addFund ? '<p class="empty">还没有基金。</p>' : '') + '</section>';
 
-  h += '<section class="card"><h2>指数高点</h2><p class="hint">回撤 =（高点 − 现在的点位）÷ 高点。高点用你自己认定的那个数，比如最近一次的历史最高收盘。</p><form data-form="highs" novalidate><div class="pair">'
-    + Object.keys(INDEX).map(function(k){ return '<div class="field"><label for="h-' + k + '">' + INDEX[k] + '的高点</label><input class="inp" type="text" inputmode="decimal" id="h-' + k + '" value="' + (state.indices[k].high != null ? state.indices[k].high : '') + '"></div>'; }).join('')
-    + '</div><p class="msg" id="h-msg"></p><div class="actions" style="margin-top:10px"><button class="btn small" type="submit">保存高点</button></div></form></section>';
-
-  h += '<section class="card"><h2>跌多投规则</h2><p class="hint">回撤达到某一档，当天金额就乘以那一档的倍数。下面是示例，按你自己的计划改。倍数填 0 表示那一档不投。</p><form data-form="tiers" novalidate><div class="tiers" id="tierRows">'
+  h += '<section class="card"><h2 style="font-size:17px">跌多投规则</h2><p class="hint">回撤达到某一档，当天金额就乘以那一档的倍数。下面是示例，按你自己的计划改。倍数填 0 表示那一档不投。</p><form data-form="tiers" novalidate><div class="tiers" id="tierRows">'
     + state.tiers.map(function(r, i){ return tierRow(r, i); }).join('') + '</div>'
     + '<p class="msg" id="t-msg"></p><div class="actions" style="margin-top:10px"><button class="btn ghost small" type="button" data-act="add-tier">加一档</button><button class="btn small" type="submit">保存规则</button></div></form></section>';
 
-  var cl = cashLeft();
-  h += '<section class="card"><h2>备用金和目标</h2><form data-form="money" novalidate><div class="pair">'
-    + '<div class="field"><label for="c-bal">现在的定投备用金</label><div class="unit"><span>¥</span><input class="inp" type="text" inputmode="decimal" id="c-bal" placeholder="' + (cl != null ? '现在约 ' + plain(Math.max(0, cl)) : '可不填') + '"></div></div>'
-    + '<div class="field"><label for="g-amt">目标金额</label><div class="unit"><span>¥</span><input class="inp" type="text" inputmode="decimal" id="g-amt" value="' + plain(state.goal) + '" placeholder="可不填"></div></div></div>'
-    + '<p class="hint">备用金填一次就行，之后每记一笔会自动扣掉，用来算还够投几天。填新的数会重新开始算。</p><p class="msg" id="c-msg"></p><div class="actions" style="margin-top:10px"><button class="btn small" type="submit">保存</button></div></form></section>';
+  h += '<section class="card"><h2 style="font-size:17px">指数高点</h2><p class="hint">回撤 =（高点 − 现在的点位）÷ 高点。高点用你自己认定的那个数，比如最近一次的历史最高收盘。计算器里也能改。</p><form data-form="highs" novalidate><div class="pair">'
+    + Object.keys(INDEX).map(function(k){ return '<div class="field"><label for="h-' + k + '">' + INDEX[k] + '的高点</label><input class="inp" type="text" inputmode="decimal" id="h-' + k + '" value="' + (state.indices[k].high != null ? state.indices[k].high : '') + '"></div>'; }).join('')
+    + '</div><p class="msg" id="h-msg"></p><div class="actions" style="margin-top:10px"><button class="btn small" type="submit">保存高点</button></div></form></section>';
 
-  h += '<section class="card"><h2>备份</h2><p class="hint" id="bk-state">' + backupText() + '</p><div class="actions"><button class="btn ghost small" type="button" data-act="export">导出备份</button><button class="btn ghost small" type="button" data-act="import">导入文件</button></div>'
+  h += '<section class="card"><h2 style="font-size:17px">PE 估值区间</h2><p class="hint">计算器里填了 PE，就按这四个分界线显示在哪个区间：低估 / 偏低 / 合理 / 偏高 / 高估。下面的数是示例，换成你自己参考的标准。它只用来显示，不影响金额。</p><form data-form="cuts" novalidate style="display:grid;gap:12px">'
+    + Object.keys(INDEX).map(function(k){ return '<div class="field"><span class="lab">' + INDEX[k] + '（从低到高四个分界线）</span><div class="cuts">' + state.peCuts[k].map(function(v, i){ return '<input class="inp" type="text" inputmode="decimal" data-cut="' + k + '" data-i="' + i + '" value="' + v + '" aria-label="' + INDEX[k] + '第 ' + (i + 1) + ' 个分界线">'; }).join('') + '</div></div>'; }).join('')
+    + '<p class="msg" id="cut-msg"></p><div class="actions"><button class="btn small" type="submit">保存区间</button></div></form></section>';
+
+  var cl = cashLeft();
+  h += '<section class="card"><h2 style="font-size:17px">目标和备用金</h2><form data-form="money" novalidate style="display:grid;gap:12px"><div class="pair">'
+    + '<div class="field"><label for="g-amt">财务自由目标</label><div class="unit"><span>¥</span><input class="inp" type="text" inputmode="decimal" id="g-amt" value="' + plain(state.goal) + '" placeholder="可不填"></div></div>'
+    + '<div class="field"><label for="c-bal">现在的定投备用金</label><div class="unit"><span>¥</span><input class="inp" type="text" inputmode="decimal" id="c-bal" placeholder="' + (cl != null ? '现在约 ' + plain(Math.max(0, cl)) : '可不填') + '"></div></div>'
+    + '<div class="field"><label for="gm-amt">每月定投目标</label><div class="unit"><span>¥</span><input class="inp" type="text" inputmode="decimal" id="gm-amt" value="' + plain(state.goalMonth) + '" placeholder="可不填"></div></div>'
+    + '<div class="field"><label for="gy-amt">每年定投目标</label><div class="unit"><span>¥</span><input class="inp" type="text" inputmode="decimal" id="gy-amt" value="' + plain(state.goalYear) + '" placeholder="可不填"></div></div></div>'
+    + '<p class="hint">备用金填一次就行，之后每记一笔会自动扣掉，用来算还够投几天。填新的数会重新开始算。</p><p class="msg" id="c-msg"></p><div class="actions"><button class="btn small" type="submit">保存</button></div></form></section>';
+
+  h += '<section class="card"><h2 style="font-size:17px">账本</h2><form data-form="info" novalidate style="display:grid;gap:12px">'
+    + '<div class="field"><label for="i-slogan">首页标语</label><input class="inp text" type="text" id="i-slogan" maxlength="24" value="' + esc(state.slogan) + '" placeholder="' + DEFAULT_SLOGAN + '"></div>'
+    + '<div class="field"><label for="i-start">开始定投的日期 <span class="hint">用这个 app 之前就在投，就填当初那天</span></label><input class="inp" type="date" id="i-start" value="' + (state.startDate || '') + '" max="' + today() + '"></div>'
+    + '<p class="msg" id="i-msg"></p><div class="actions"><button class="btn small" type="submit">保存</button></div></form></section>';
+
+  h += '<section class="card"><h2 style="font-size:17px">备份</h2><p class="hint" id="bk-state">' + backupText() + '</p><div class="actions"><button class="btn ghost small" type="button" data-act="export">导出备份</button><button class="btn ghost small" type="button" data-act="import">导入文件</button></div>'
     + (pending ? '<div class="inline"><p>' + esc(pending.text) + '</p><div class="actions"><button class="btn small" type="button" data-act="import-yes">确认导入</button><button class="btn ghost small" type="button" data-act="import-no">取消</button></div></div>' : '')
     + '<input class="sr" type="file" id="bk-file" accept="application/json,.json,text/plain" tabindex="-1" aria-hidden="true"><p class="hint">备份里有你的持仓和金额，存到手机“文件”里，不要发到公开的地方。</p></section>';
 
   h += '<details class="card"><summary>它能做什么、不能做什么</summary><div style="display:grid;gap:8px;font-size:14px;margin-top:10px">'
-    + '<p>能做：按你定的规则，算出今天每只基金投多少；超过限购就按上限；点一下记下来；算累计投入、收益、目标进度和备用金还够几天。</p>'
-    + '<p>不能做：它不联网取行情，点位要你自己填；它不连接任何基金或证券账户，不会替你下单；市值要你从基金 app 里抄过来；它不判断规则好不好，也不提供投资建议。</p>'
+    + '<p>能做：按你定的规则，算出今天每只基金投多少；超过限购就按上限；点一下记下来；用截图文字更新市值；算总资产、财务自由度、今年的收益和定投进度。</p>'
+    + '<p>不能做：它不联网取行情，点位和 PE 要你自己填；它不连接任何基金或证券账户，不会替你下单；它不判断规则好不好，也不提供投资建议。</p>'
+    + '<p class="hint">账户概览里：增长金额 = 现在 − 年初；年度收益率 = 今年赚的 ÷ 年初金额（年初是 0 时除以今年投入）；今年赚的 =（现在 − 本金）−（年初 − 年初本金）。</p>'
     + '<p class="hint">回撤越深投得越多，意味着下跌时投入的钱更多，备用金也消耗得更快。规则怎么定由你自己决定。</p></div></details>';
   return h;
 }
 function tierRow(r, i){
-  return '<div class="tier"><span>回撤 ≥</span><input class="inp" type="text" inputmode="decimal" data-tier="' + i + '" data-col="0" value="' + r[0] + '"' + (i === 0 ? ' readonly aria-readonly="true"' : '') + ' aria-label="第 ' + (i + 1) + ' 档的回撤起点"><span>% 乘</span><input class="inp" type="text" inputmode="decimal" data-tier="' + i + '" data-col="1" value="' + r[1] + '" aria-label="第 ' + (i + 1) + ' 档的倍数"><span>倍' + (i > 0 ? ' <button class="link danger" type="button" data-act="del-tier" data-i="' + i + '">删</button>' : '') + '</span></div>';
+  return '<div class="tier-row"><span>回撤 ≥</span><input class="inp" type="text" inputmode="decimal" data-tier="' + i + '" data-col="0" value="' + r[0] + '"' + (i === 0 ? ' readonly aria-readonly="true"' : '') + ' aria-label="第 ' + (i + 1) + ' 档的回撤起点"><span>% 乘</span><input class="inp" type="text" inputmode="decimal" data-tier="' + i + '" data-col="1" value="' + r[1] + '" aria-label="第 ' + (i + 1) + ' 档的倍数"><span>倍' + (i > 0 ? ' <button class="link danger" type="button" data-act="del-tier" data-i="' + i + '">删</button>' : '') + '</span></div>';
 }
 function backupText(){
   var at = null; try { at = window.localStorage.getItem(BK_KEY); } catch (e) {}
@@ -714,10 +1229,17 @@ function backupText(){
 }
 
 /* ---------- render ---------- */
+var TABS = [['book', '账本', 'book'], ['dca', '定投', 'sprout'], ['calc', '计算器', 'pyramid'], ['set', '设置', 'sliders']];
 function render(){
-  renderHeader();
+  hideTip();
+  document.documentElement.setAttribute('data-page', ui.tab);
+  var dark = ui.tab === 'calc' || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  $('#themeColor').setAttribute('content', dark ? '#121215' : '#F0F1F6');
+  $('#tabbar').innerHTML = TABS.map(function(t){ return '<button type="button" role="tab" data-tab="' + t[0] + '" aria-selected="' + (ui.tab === t[0]) + '">' + ic(t[2]) + '<span>' + t[1] + '</span></button>'; }).join('');
   var v = $('#view');
-  v.innerHTML = '<div style="display:grid;gap:14px">' + (ui.tab === 'today' ? viewToday() : ui.tab === 'over' ? viewOver() : viewSet()) + '</div>';
+  v.innerHTML = loadFailed ? '<p class="msg">读取已有内容时出错。为了不覆盖它，这次不会保存任何改动。</p>' : '';
+  v.innerHTML += ui.tab === 'book' ? viewBook() : ui.tab === 'dca' ? viewDca() : ui.tab === 'calc' ? viewCalc() : viewSet();
+  ui.pop = false;
 }
 var toastTimer = null;
 function toast(text){ var el = $('#toast'); el.textContent = text; el.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(function(){ el.hidden = true; }, 2800); }
@@ -725,7 +1247,7 @@ function toast(text){ var el = $('#toast'); el.textContent = text; el.hidden = f
 /* ---------- actions ---------- */
 function readTiers(){
   var rows = [];
-  $$('#tierRows .tier').forEach(function(row){
+  $$('#tierRows .tier-row').forEach(function(row){
     var a = $('[data-col="0"]', row).value.trim(), b = $('[data-col="1"]', row).value.trim();
     rows.push([a === '' ? NaN : Number(a), b === '' ? NaN : Number(b)]);
   });
@@ -756,7 +1278,7 @@ function readFile(file){
     var o = null; try { o = JSON.parse(String(fr.result)); } catch (e) {}
     if (!o || o.app !== 'invest-book' || !o.data){ toast('这不是投资账本的文件。'); return; }
     var s = cleanState(o.data);
-    pending = { state: s, text: '文件里有 ' + s.funds.length + ' 只基金、' + s.entries.length + ' 笔记录。导入后，基金、高点、规则、备用金和目标换成文件里的；记录按编号合并，已有的不会重复。' };
+    pending = { state: s, text: '文件里有 ' + s.funds.length + ' 只基金、' + s.entries.length + ' 笔记录。导入后，基金、高点、规则、目标和其他设置换成文件里的；记录按编号合并，已有的不会重复。' };
     ui.tab = 'set'; render();
   };
   fr.readAsText(file);
@@ -767,32 +1289,61 @@ function applyImport(){
   var keep = state.entries.slice();
   s.entries.forEach(function(e){ if (!seen[e.id]){ keep.push(e); seen[e.id] = true; } });
   var next = s; next.entries = keep;
-  var before = null; try { before = window.localStorage.getItem(LS_KEY); if (before) window.localStorage.setItem(LS_KEY + '.beforeImport', before); } catch (e) {}
+  Object.keys(state.days).forEach(function(d){ if (!next.days[d]) next.days[d] = state.days[d]; });
+  var hd = {}; next.history.forEach(function(h){ hd[h.d] = true; });
+  next.history = next.history.concat(state.history.filter(function(h){ return !hd[h.d]; })).sort(function(a, b){ return a.d < b.d ? -1 : 1; });
+  try { var before = window.localStorage.getItem(LS_KEY); if (before) window.localStorage.setItem(LS_KEY + '.beforeImport', before); } catch (e) {}
   state = next;
-  if (save()){ toast('已导入'); ui.tab = state.funds.length ? 'today' : 'set'; }
+  if (save()){ toast('已导入'); ui.tab = state.funds.length ? 'book' : 'set'; }
   render();
+}
+function saveCalc(){
+  var k = ui.calcIdx, msg = $('#c-msg');
+  var hr = $('#c-high').value.trim(), lr = $('#c-level').value.trim(), pr = $('#c-pe').value.trim();
+  var high = toLevel(hr), level = lr === '' ? null : toLevel(lr), pe = pr === '' ? null : toPe(pr);
+  if (high == null){ msg.textContent = '基准高点填一个正数，比如 31361.37'; return; }
+  if (lr !== '' && level == null){ msg.textContent = '当前点位填一个正数，比如 29187'; return; }
+  if (pr !== '' && pe == null){ msg.textContent = 'PE 填一个正数，最多两位小数，比如 30'; return; }
+  if (level == null && state.indices[k].level == null){ msg.textContent = '填今天的点位。'; return; }
+  state.indices[k].high = high;
+  if (level != null){ state.indices[k].level = level; state.indices[k].levelDate = today(); }
+  if (pe != null) state.pe[k] = { v: pe, d: today() };
+  ui.pop = true;
+  if (save()) render();
+  var r = $('.res'); if (r && r.scrollIntoView) r.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
 }
 
 document.addEventListener('click', function(ev){
+  var tipEl = ev.target.closest('[data-tip]');
+  if (tipEl){ showTip(tipEl); return; }
+  hideTip();
   var tab = ev.target.closest('[data-tab]');
-  if (tab){ ui.tab = tab.dataset.tab; ui.editFund = null; ui.addFund = false; ui.editValue = null; ui.confirmDel = null; ui.confirmUndo = false; render(); window.scrollTo(0, 0); return; }
-  var go = ev.target.closest('[data-go]');
-  if (go){ ui.tab = go.dataset.go; render(); return; }
+  if (tab){ if (tab.dataset.tab === 'calc' && ui.tab !== 'calc') ui.calcTab = 'calc'; ui.tab = tab.dataset.tab; ui.editFund = null; ui.addFund = false; ui.editValue = null; ui.confirmDel = null; ui.confirmUndo = false; ui.editGoal = null; render(); window.scrollTo(0, 0); return; }
+  var ct = ev.target.closest('[data-ctab]');
+  if (ct){ ui.calcTab = ct.dataset.ctab; render(); return; }
   var b = ev.target.closest('[data-act]'); if (!b) return;
   var act = b.dataset.act, t = today();
   if (act === 'log'){
-    var ts = Date.now(), n = 0;
+    var ts = Date.now(), n = 0, day = {};
     state.funds.forEach(function(f){ var p = planFor(f); if (p.amt > 0){ state.entries.push({ id: uid(), date: t, fund: f.id, amt: p.amt, ts: ts, plan: true }); n++; } });
+    Object.keys(INDEX).forEach(function(k){ var x = state.indices[k]; if (x.high != null && x.level != null && x.levelDate === t) day[k] = { l: x.level, h: x.high, m: tierFor(drawdown(k)).mult }; });
+    if (n && Object.keys(day).length) state.days[t] = day;
     if (n && save()) toast('已记下 ' + n + ' 笔');
     render();
   } else if (act === 'undo'){
     if (!ui.confirmUndo){ ui.confirmUndo = true; render(); return; }
     ui.confirmUndo = false;
     state.entries = state.entries.filter(function(e){ return !(e.date === t && e.plan); });
+    delete state.days[t];
     if (save()) toast('已撤销今天的记录'); render();
-  } else if (act === 'skip'){ if (state.skipped.indexOf(t) < 0) state.skipped.push(t); if (save()) render(); }
+  } else if (act === 'calc') saveCalc();
+  else if (act === 'cidx'){ ui.calcIdx = b.dataset.k; render(); }
+  else if (act === 'skip'){ if (state.skipped.indexOf(t) < 0) state.skipped.push(t); if (save()) render(); }
   else if (act === 'unskip'){ state.skipped = state.skipped.filter(function(d){ return d !== t; }); if (save()) render(); }
   else if (act === 'newhigh'){ var k = b.dataset.k; state.indices[k].high = state.indices[k].level; if (save()) toast(INDEX[k] + '的高点改成了 ' + lvl(state.indices[k].high)); render(); }
+  else if (act === 'edit-goal'){ ui.editGoal = b.dataset.k && ui.editGoal !== b.dataset.k ? b.dataset.k : null; render(); var gi = $('#goal-in') || $('#ys-a'); if (gi) gi.focus(); }
+  else if (act === 'detail'){ ui.detail = ui.detail === b.dataset.k ? null : b.dataset.k; render(); }
+  else if (act === 'cal'){ var cm = parseYmd((ui.calMonth || t.slice(0, 7)) + '-01'); cm.setMonth(cm.getMonth() + Number(b.dataset.d)); var nm = ymd(cm).slice(0, 7); if (nm <= t.slice(0, 7)){ ui.calMonth = nm; render(); } }
   else if (act === 'value'){ ui.editValue = ui.editValue === b.dataset.id ? null : b.dataset.id; render(); var vi = $('#v-amt'); if (vi) vi.focus(); }
   else if (act === 'cancel-value'){ ui.editValue = null; render(); }
   else if (act === 'manual'){ ui.manual = !ui.manual; render(); }
@@ -800,6 +1351,9 @@ document.addEventListener('click', function(ev){
   else if (act === 'keep'){ ui.confirmDel = null; render(); }
   else if (act === 'del'){ state.entries = state.entries.filter(function(e){ return e.id !== b.dataset.id; }); ui.confirmDel = null; if (save()) toast('已删除这一笔'); render(); }
   else if (act === 'all'){ ui.showAll = true; render(); }
+  else if (act === 'day'){ ui.openDay = ui.openDay === b.dataset.d ? null : b.dataset.d; ui.confirmDel = null; render(); }
+  else if (act === 'alldays'){ ui.showAllDays = true; render(); }
+  else if (act === 'snap-open'){ ui.snapOpen = !ui.snapOpen || !!ui.snap; ui.snap = ui.snapOpen ? ui.snap : null; render(); }
   else if (act === 'howto'){ ui.howto = !ui.howto; render(); }
   else if (act === 'paste'){
     var fallback = function(){ ui.pasteBox = true; render(); var ta = $('#s-text'); if (ta) ta.focus(); };
@@ -815,7 +1369,7 @@ document.addEventListener('click', function(ev){
   else if (act === 'cancel-fund'){ ui.editFund = null; ui.addFund = false; ui.confirmDelFund = false; render(); }
   else if (act === 'del-fund'){
     var used = state.entries.some(function(e){ return e.fund === ui.editFund; });
-    if (used){ $('#f-msg').textContent = '这只基金有过记录，删掉后记录会显示成“已删除的基金”。不想留，就先在“总览”里删掉它的记录。'; if (!ui.confirmDelFund){ ui.confirmDelFund = true; b.textContent = '仍然删除这只基金'; return; } }
+    if (used){ $('#f-msg').textContent = '这只基金有过记录，删掉后记录会显示成“已删除的基金”。不想留，就先在“定投”页的记录里删掉它的记录。'; if (!ui.confirmDelFund){ ui.confirmDelFund = true; b.textContent = '仍然删除这只基金'; return; } }
     else if (!ui.confirmDelFund){ ui.confirmDelFund = true; b.textContent = '再点一次确认删除这只基金'; return; }
     state.funds = state.funds.filter(function(f){ return f.id !== ui.editFund; }); ui.editFund = null; ui.confirmDelFund = false;
     if (save()) toast('已删除'); render();
@@ -831,28 +1385,26 @@ document.addEventListener('click', function(ev){
   else if (act === 'import-yes') applyImport();
   else if (act === 'import-no'){ pending = null; render(); }
 });
-
+document.addEventListener('keydown', function(ev){ if (ev.key === 'Enter' && ev.target.closest && ev.target.closest('.cbox')){ ev.preventDefault(); saveCalc(); } if (ev.key === 'Escape') hideTip(); });
+document.addEventListener('input', function(ev){
+  if (ev.target.id === 'c-pe'){ var v = toPe(ev.target.value), z = $('.zone'); if (!z) return; var k = ui.calcIdx; z.className = 'zone ' + (v == null ? 'none' : 'z' + zoneOf(k, v)); z.textContent = v == null ? '填 PE 后显示' : ZONES[zoneOf(k, v)]; }
+});
 document.addEventListener('change', function(ev){
   var el = ev.target;
-  if (el.dataset && el.dataset.level){
-    var k = el.dataset.level, v = toLevel(el.value);
-    if (el.value.trim() === ''){ return; }
-    if (v == null){ toast('点位填一个正数，比如 29187.5'); return; }
-    state.indices[k].level = v; state.indices[k].levelDate = today();
-    if (save()) render();
-  }
   if (el.id === 'bk-file'){ var f = el.files && el.files[0]; el.value = ''; if (f) readFile(f); }
 });
 
 document.addEventListener('submit', function(ev){
   ev.preventDefault();
   var form = ev.target, kind = form.dataset.form, t = today();
+  var money = function(id){ var raw = $(id).value.trim(); return raw === '' ? { empty: true, v: null } : { empty: false, v: toCents(raw) }; };
   if (kind === 'snap'){ applySnap(); return; }
   if (kind === 'value'){
     var c = toCents($('#v-amt').value), f = fundById(form.dataset.id);
     if (c == null){ $('#v-msg').textContent = '填一个金额，最多两位小数。'; return; }
     if (f.cost != null){ f.cost = investedFor(f); f.snapTs = Date.now(); }
     f.value = c; f.valueDate = t; ui.editValue = null;
+    recordHistory();
     if (save()) toast('市值已更新'); render();
   } else if (kind === 'manual'){
     var d = $('#m-date').value, a = toCents($('#m-amt').value), fid = $('#m-fund').value;
@@ -860,6 +1412,16 @@ document.addEventListener('submit', function(ev){
     if (!a){ $('#m-msg').textContent = '金额填一个大于 0 的数，最多两位小数。'; return; }
     state.entries.push({ id: uid(), date: d, fund: fid, amt: a, ts: Date.now(), plan: false });
     if (save()) toast('已记下'); render();
+  } else if (kind === 'goal'){
+    var gv = money('#goal-in'), gk = form.dataset.k;
+    if (!gv.empty && !gv.v){ $('#goal-msg').textContent = '填一个大于 0 的金额，最多两位小数；留空表示不设。'; return; }
+    if (gk === 'free') state.goal = gv.v; else if (gk === 'month') state.goalMonth = gv.v; else state.goalYear = gv.v;
+    ui.editGoal = null; if (save()) toast('目标已保存'); render();
+  } else if (kind === 'ystart'){
+    var ya = money('#ys-a'), yc = money('#ys-c');
+    if (ya.v == null || yc.v == null){ $('#ys-msg').textContent = '两个都填数字，今年才开始就填 0。'; return; }
+    state.yearStart = { year: Number(t.slice(0, 4)), assets: ya.v, cost: yc.v };
+    ui.editGoal = null; if (save()) toast('年初数据已保存'); render();
   } else if (kind === 'fund'){
     var msg = $('#f-msg'), name = S($('#f-name').value, 30);
     var base = $('#f-base').value.trim() === '' ? null : toCents($('#f-base').value);
@@ -884,18 +1446,28 @@ document.addEventListener('submit', function(ev){
     if (!tiers || tiers.length !== readTiers().length){ $('#t-msg').textContent = '每一档都要填数字，回撤起点从 0 开始、从小到大不重复，倍数在 0 到 20 之间。'; return; }
     state.tiers = tiers;
     if (save()) toast('规则已保存'); render();
+  } else if (kind === 'cuts'){
+    var next = {}, okAll = true;
+    Object.keys(INDEX).forEach(function(k){ var arr = $$('[data-cut="' + k + '"]').map(function(i){ var v = i.value.trim(); return v === '' ? NaN : Number(v); }); var c2 = cleanCuts(arr); if (!c2) okAll = false; else next[k] = c2; });
+    if (!okAll){ $('#cut-msg').textContent = '每个指数填四个正数，从小到大，不能相等。'; return; }
+    state.peCuts = next; if (save()) toast('估值区间已保存'); render();
   } else if (kind === 'money'){
-    var rawC = $('#c-bal').value.trim(), rawG = $('#g-amt').value.trim();
-    var cb = rawC === '' ? null : toCents(rawC), g = rawG === '' ? null : toCents(rawG);
-    if ((rawC !== '' && cb == null) || (rawG !== '' && g == null)){ $('#c-msg').textContent = '金额填数字，最多两位小数。'; return; }
-    if (cb != null) state.cash = { balance: cb, ts: Date.now() };
-    state.goal = g || null;
+    var cb = money('#c-bal'), g = money('#g-amt'), gm = money('#gm-amt'), gy = money('#gy-amt');
+    if ([cb, g, gm, gy].some(function(x){ return !x.empty && x.v == null; })){ $('#c-msg').textContent = '金额填数字，最多两位小数。'; return; }
+    if (cb.v != null) state.cash = { balance: cb.v, ts: Date.now() };
+    state.goal = g.v || null; state.goalMonth = gm.v || null; state.goalYear = gy.v || null;
+    if (save()) toast('已保存'); render();
+  } else if (kind === 'info'){
+    var sd = $('#i-start').value;
+    if (sd && (!validDate(sd) || sd > t)){ $('#i-msg').textContent = '日期选今天或以前。'; return; }
+    state.slogan = S($('#i-slogan').value, 24); state.startDate = sd || null;
     if (save()) toast('已保存'); render();
   }
 });
 
 var lastDay = today();
 document.addEventListener('visibilitychange', function(){ if (!document.hidden && today() !== lastDay){ lastDay = today(); ui.confirmUndo = false; render(); } });
+if (window.matchMedia){ var mq = window.matchMedia('(prefers-color-scheme: dark)'); if (mq.addEventListener) mq.addEventListener('change', render); }
 
 if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0){
   window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
